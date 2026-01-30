@@ -18,6 +18,8 @@ export async function GET(req: Request) {
     let query = `SELECT * FROM public.get_swipescreenhome($1)`;
     const swipeResults = await pool.query(query, [userId]);
 
+    console.log("swipeResults?.rows", swipeResults);
+
     if (swipeResults?.rows?.length === 0) {
       return NextResponse.json({
         swipes: [],
@@ -28,11 +30,32 @@ export async function GET(req: Request) {
     return NextResponse.json({
       swipes: swipeResults?.rows,
     });
-  } catch (error) {
-    console.error("Database query failed:", error);
+  } catch (error: any) {
+    console.error("=== GET SWIPE SCREEN HOME ERROR ===");
+    console.error("Error message:", error.message);
+    console.error("Error code:", error.code);
+    console.error("Error detail:", error.detail);
+    console.error("Error hint:", error.hint);
+    console.error("Error position:", error.position);
+    console.error("Error where:", error.where);
+    console.error("Error schema:", error.schema);
+    console.error("Error table:", error.table);
+    console.error("Error column:", error.column);
+    console.error("Error dataType:", error.dataType);
+    console.error("Error constraint:", error.constraint);
+    console.error("Error stack:", error.stack);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
+    console.error("====================================");
+
     return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
+      {
+        error: "Internal Server Error",
+        message: error.message,
+        errorCode: error.code,
+        errorDetail: error.detail,
+        errorHint: error.hint,
+      },
+      { status: 500 },
     );
   }
 }

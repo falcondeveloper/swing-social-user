@@ -31,6 +31,8 @@ interface FormDataType {
   maxDistance: number;
   distanceChecked: boolean;
   block: SwipingBlock;
+  travelMode: boolean;
+  travelLocation: string;
 }
 
 type SavedOptionsType = any;
@@ -38,6 +40,15 @@ type SavedOptionsType = any;
 const validationSchema = Yup.object({
   city: Yup.string().nullable(),
   maxDistance: Yup.number().min(0).max(150),
+  travelMode: Yup.boolean(),
+  travelLocation: Yup.string().when("travelMode", {
+    is: true,
+    then: (schema) =>
+      schema.required(
+        "Travel location is required when travel mode is enabled",
+      ),
+    otherwise: (schema) => schema.nullable(),
+  }),
 });
 
 export default function Preferences() {
@@ -45,15 +56,20 @@ export default function Preferences() {
   const [profileId, setProfileId] = useState<string | null>(null);
 
   const [cityLoading, setCityLoading] = useState(false);
+  const [travelCityLoading, setTravelCityLoading] = useState(false);
   const [loadingPreferences, setLoadingPreferences] = useState<boolean>(true);
   const [openCity, setOpenCity] = useState(false);
+  const [openTravelCity, setOpenTravelCity] = useState(false);
   const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [travelCityOptions, setTravelCityOptions] = useState<string[]>([]);
   const [savedOptions, setSavedOptions] = useState<SavedOptionsType | null>(
-    null
+    null,
   );
   const [cityInput, setCityInput] = useState<string>("");
+  const [travelCityInput, setTravelCityInput] = useState<string>("");
 
   const cityFetchTimer = useRef<number | undefined>(undefined);
+  const travelCityFetchTimer = useRef<number | undefined>(undefined);
 
   const formik = useFormik<FormDataType>({
     initialValues: {
@@ -62,6 +78,8 @@ export default function Preferences() {
       maxDistance: 50,
       distanceChecked: false,
       block: { couples: false, singleMale: false, singleFemale: false },
+      travelMode: false,
+      travelLocation: "",
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
@@ -123,6 +141,8 @@ export default function Preferences() {
         singleMale: Number(savedOptions?.BlockSingleMales) === 1,
         singleFemale: Number(savedOptions?.BlockSingleFemales) === 1,
       },
+      travelMode: Number(savedOptions?.TravelMode) === 1,
+      travelLocation: savedOptions?.TravelLocation ?? "",
     });
   }, [savedOptions]);
 
@@ -143,7 +163,7 @@ export default function Preferences() {
     cityFetchTimer.current = window.setTimeout(async () => {
       try {
         const response = await fetch(
-          `/api/user/city?city=${encodeURIComponent(cityInput)}`
+          `/api/user/city?city=${encodeURIComponent(cityInput)}`,
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -151,7 +171,7 @@ export default function Preferences() {
         const json = await response.json();
         const cities: any[] = json?.cities ?? [];
         const unique = Array.from(
-          new Set(cities.map((c) => (c?.City ?? c?.city ?? "").trim()))
+          new Set(cities.map((c) => (c?.City ?? c?.city ?? "").trim())),
         ).filter(Boolean);
         setCityOptions(unique);
       } catch (err) {
@@ -168,6 +188,51 @@ export default function Preferences() {
       }
     };
   }, [cityInput, openCity]);
+
+  // Travel City autocomplete
+  useEffect(() => {
+    if (!openTravelCity) {
+      setTravelCityOptions([]);
+      return;
+    }
+
+    if (!travelCityInput || travelCityInput.trim() === "") {
+      setTravelCityOptions([]);
+      return;
+    }
+
+    setTravelCityLoading(true);
+    if (travelCityFetchTimer.current)
+      window.clearTimeout(travelCityFetchTimer.current);
+
+    travelCityFetchTimer.current = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/user/city?city=${encodeURIComponent(travelCityInput)}`,
+        );
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const json = await response.json();
+        const cities: any[] = json?.cities ?? [];
+        const unique = Array.from(
+          new Set(cities.map((c) => (c?.City ?? c?.city ?? "").trim())),
+        ).filter(Boolean);
+        setTravelCityOptions(unique);
+      } catch (err) {
+        console.error("Error fetching travel cities:", err);
+        setTravelCityOptions([]);
+      } finally {
+        setTravelCityLoading(false);
+      }
+    }, 500);
+
+    return () => {
+      if (travelCityFetchTimer.current) {
+        window.clearTimeout(travelCityFetchTimer.current);
+      }
+    };
+  }, [travelCityInput, openTravelCity]);
 
   const handleGetPreferences = async (userId: string | null) => {
     if (!userId) return;
@@ -262,8 +327,8 @@ export default function Preferences() {
             key === "couples"
               ? "Couples"
               : key === "singleMale"
-              ? "Single Males"
-              : "Single Females";
+                ? "Single Males"
+                : "Single Females";
           return (
             <FormControlLabel
               key={key}
@@ -274,7 +339,7 @@ export default function Preferences() {
                   onChange={(e) =>
                     setNested(
                       `swiping.${key}`,
-                      (e.target as HTMLInputElement).checked
+                      (e.target as HTMLInputElement).checked,
                     )
                   }
                   sx={{
@@ -346,6 +411,91 @@ export default function Preferences() {
         </Box>
       )}
 
+      {/* Travel Mode */}
+      <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">
+        Travel Mode
+      </Typography>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={formik.values.travelMode}
+            onChange={(e) => {
+              const isChecked = e.target.checked;
+              setNested("travelMode", isChecked);
+              // Clear travel location when unchecking travel mode
+              if (!isChecked) {
+                setNested("travelLocation", "");
+              }
+            }}
+            sx={{ color: "#e91e63", "&.Mui-checked": { color: "#e91e63" } }}
+          />
+        }
+        label="Enable Travel Mode"
+        sx={{ color: "white" }}
+      />
+
+      {formik.values.travelMode && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body2" gutterBottom color="white">
+            Enter your travel destination
+          </Typography>
+          <Autocomplete
+            id="autocomplete-travel-city"
+            open={openTravelCity}
+            onOpen={() => setOpenTravelCity(true)}
+            onClose={() => setOpenTravelCity(false)}
+            freeSolo
+            options={travelCityOptions}
+            loading={travelCityLoading}
+            inputValue={travelCityInput}
+            value={formik.values.travelLocation}
+            onInputChange={(_, newInput) => setTravelCityInput(newInput)}
+            onChange={(_, newValue) => {
+              setNested("travelLocation", (newValue ?? "") as string);
+            }}
+            onBlur={() => formik.setFieldTouched("travelLocation", true)}
+            getOptionLabel={(option) =>
+              typeof option === "string" ? option : String(option ?? "")
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="filled"
+                label="Travel Location"
+                required={formik.values.travelMode}
+                error={
+                  formik.touched.travelLocation &&
+                  Boolean(formik.errors.travelLocation)
+                }
+                helperText={
+                  formik.touched.travelLocation && formik.errors.travelLocation
+                }
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {travelCityLoading ? (
+                        <CircularProgress color="inherit" size={15} />
+                      ) : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+                sx={{
+                  backgroundColor: "#2a2a2a",
+                  input: { color: "#fff" },
+                  mb: 3,
+                  borderRadius: "4px",
+                  "& .MuiFormHelperText-root": {
+                    color: "#f44336",
+                  },
+                }}
+              />
+            )}
+          />
+        </Box>
+      )}
+
       {/* Blocking Preferences */}
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">
         Who should I block when I am swiping?
@@ -356,8 +506,8 @@ export default function Preferences() {
             key === "couples"
               ? "Couples"
               : key === "singleMale"
-              ? "Single Males"
-              : "Single Females";
+                ? "Single Males"
+                : "Single Females";
           return (
             <FormControlLabel
               key={key}
@@ -368,7 +518,7 @@ export default function Preferences() {
                   onChange={(e) =>
                     setNested(
                       `block.${key}`,
-                      (e.target as HTMLInputElement).checked
+                      (e.target as HTMLInputElement).checked,
                     )
                   }
                   sx={{
@@ -435,32 +585,56 @@ export default function Preferences() {
 
       {/* Submit Button */}
       <Box
-        sx={{ display: "flex", justifyContent: "center", width: "100%", mt: 4 }}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          width: "100%",
+          mt: 4,
+        }}
       >
         <Button
           type="submit"
           variant="contained"
-          color="primary"
           disabled={formik.isSubmitting}
           sx={{
             textTransform: "none",
             backgroundColor: "#f50057",
-            textAlign: "center",
-            py: 1.5,
+            color: "#fff",
             px: 4,
-            fontSize: "16px",
-            fontWeight: "bold",
-            "&:hover": { backgroundColor: "#c51162" },
+            py: 1.4,
+            minWidth: 100,
+            fontSize: 16,
+            fontWeight: 700,
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1.5,
+
+            "&:hover": {
+              backgroundColor: "#c51162",
+              transform: "translateY(-1px)",
+            },
+
+            "&:active": {
+              transform: "translateY(0)",
+            },
+
+            "&.Mui-disabled": {
+              backgroundColor: "#f50057",
+              opacity: 0.7,
+              color: "#fff",
+            },
           }}
         >
           {formik.isSubmitting ? (
             <>
               <CircularProgress
-                size={20}
+                size={18}
                 thickness={5}
-                style={{ marginRight: 12 }}
+                sx={{ color: "#fff" }}
               />
-              Saving...
+              Saving…
             </>
           ) : (
             "Save"

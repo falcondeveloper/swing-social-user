@@ -1,116 +1,120 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Box, Paper, Typography, Button, Stack } from "@mui/material";
 
-export default function NotificationModal() {
+export default function NotificationPopup() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!("Notification" in window)) return;
-
-    const dismissed = localStorage.getItem("notificationModalDismissed");
+    const granted = localStorage.getItem("notificationGranted");
+    if (granted === "true") return;
+    const dismissed = sessionStorage.getItem("notificationPopupDismissed");
     if (dismissed === "true") return;
 
-    if (Notification.permission !== "granted") {
+    if (
+      Notification.permission === "default" ||
+      Notification.permission === "denied"
+    ) {
       setOpen(true);
     }
   }, []);
 
   const turnOnNotification = async () => {
-    if (!("Notification" in window)) return;
+    if (!("Notification" in window)) {
+      alert("Notifications are not supported in this browser.");
+      return;
+    }
+
+    console.log("Current permission:", Notification.permission);
+
+    if (Notification.permission === "denied") {
+      alert(
+        "Notifications are blocked in your browser settings. Please enable them manually.",
+      );
+      localStorage.setItem("notificationPopupDismissed", "true");
+      setOpen(false);
+      return;
+    }
 
     const permission = await Notification.requestPermission();
+    console.log("New permission:", permission);
 
     if (permission === "granted") {
-      localStorage.setItem("notificationModalDismissed", "true");
+      localStorage.setItem("notificationGranted", "true");
+      localStorage.removeItem("notificationPopupDismissed");
+      setOpen(false);
+    } else {
+      sessionStorage.setItem("notificationPopupDismissed", "true");
       setOpen(false);
     }
   };
 
-  const closeModal = () => {
-    localStorage.setItem("notificationModalDismissed", "true");
+  const closePopup = () => {
+    localStorage.setItem("notificationPopupDismissed", "true");
     setOpen(false);
   };
 
   if (!open) return null;
 
   return (
-    <div style={overlay}>
-      <div style={modal}>
-        <div style={{ fontSize: 30 }}>🔔</div>
+    <Box
+      sx={{
+        position: "fixed",
+        bottom: 84,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 1400,
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        px: 2,
+      }}
+    >
+      <Paper
+        elevation={6}
+        sx={{
+          maxWidth: 320,
+          width: "100%",
+          px: 2,
+          py: 1.5,
+          borderRadius: 2,
+        }}
+      >
+        <Typography fontSize={13} color="text.primary" sx={{ mb: 1 }}>
+          Turn on notifications to stay updated on likes and messages.
+        </Typography>
 
-        <h2 style={title}>Turn On Notifications</h2>
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button
+            size="small"
+            variant="contained"
+            onClick={turnOnNotification}
+            sx={{
+              textTransform: "none",
+              fontSize: 12,
+              bgcolor: "#ff4d6d",
+              "&:hover": { bgcolor: "#e64360" },
+            }}
+          >
+            Turn on
+          </Button>
 
-        <p style={description}>
-          Get notified instantly when someone likes or messages you.
-        </p>
-
-        <button style={primaryBtn} onClick={turnOnNotification}>
-          🔔 Turn On Notification
-        </button>
-
-        <button style={secondaryBtn} onClick={closeModal}>
-          Maybe later
-        </button>
-      </div>
-    </div>
+          <Button
+            size="small"
+            variant="text"
+            onClick={closePopup}
+            sx={{
+              textTransform: "none",
+              fontSize: 12,
+              color: "text.secondary",
+            }}
+          >
+            Maybe later
+          </Button>
+        </Stack>
+      </Paper>
+    </Box>
   );
 }
-
-/* ---------------- STYLES ---------------- */
-
-const overlay: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.6)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 9999,
-};
-
-const modal: React.CSSProperties = {
-  background: "#fff",
-  padding: 18, // reduced
-  width: "90%",
-  maxWidth: 320, // reduced
-  borderRadius: 14,
-  color: "#000",
-  textAlign: "center",
-  boxShadow: "0 16px 30px rgba(0,0,0,0.25)",
-};
-
-const title: React.CSSProperties = {
-  marginTop: 8,
-  marginBottom: 6,
-  fontSize: 18, // reduced
-};
-
-const description: React.CSSProperties = {
-  color: "#666",
-  fontSize: 13, // reduced
-  marginBottom: 14,
-};
-
-const primaryBtn: React.CSSProperties = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: 8,
-  border: "none",
-  fontSize: 14,
-  fontWeight: 600,
-  cursor: "pointer",
-  color: "#fff",
-  background: "linear-gradient(135deg, #ff4d6d, #ff758f)",
-  marginBottom: 8,
-};
-
-const secondaryBtn: React.CSSProperties = {
-  width: "100%",
-  padding: "8px",
-  background: "transparent",
-  border: "none",
-  color: "#777",
-  fontSize: 12,
-  cursor: "pointer",
-};

@@ -45,6 +45,7 @@ type StepType =
   | "success"
   | "failed";
 type SelfieStatus = "idle" | "uploading" | "verifying";
+
 const theme = createTheme({
   palette: {
     primary: { main: "#FF2D55", light: "#FF617B", dark: "#CC1439" },
@@ -405,7 +406,8 @@ export default function UploadAvatar({ params }: { params: Params }) {
       setSelfiePreview(null);
       openDialog(
         "error",
-        err.message || "Selfie verification failed. Please try again.",
+        err.message ||
+          "Verification failed. Double check your profile picture and verification picture are of your face.",
       );
     } finally {
       setSelfieStatus("idle");
@@ -663,6 +665,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                                     height: "100%",
                                     objectFit: "cover",
                                     borderRadius: "16px",
+                                    display: "block",
                                   }}
                                 />
                                 <IconButton
@@ -763,13 +766,15 @@ export default function UploadAvatar({ params }: { params: Params }) {
                     Selfie Verification
                   </Typography>
 
+                  {/* ✅ CLIENT REQUIRED TEXT */}
                   <Typography
                     sx={{ color: "#bbb", mt: 1, mb: 2, fontSize: "0.9rem" }}
                   >
-                    Verify your face with the profile photo you uploaded.
+                    Verification must match the face picture in your profile.
                     <br />
                     <strong style={{ color: "#fff" }}>
-                      Your selfie must match your avatar.
+                      Double check your profile picture and verification picture
+                      are of your face.
                     </strong>
                   </Typography>
 
@@ -839,7 +844,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                               variant="body2"
                               sx={{ color: "rgba(255,255,255,0.7)" }}
                             >
-                              This usually takes 5–10 seconds. Please don’t
+                              This usually takes 15–30 seconds. Please don’t
                               close the app.
                             </Typography>
                           </Box>
@@ -923,12 +928,17 @@ export default function UploadAvatar({ params }: { params: Params }) {
 
                     {/* Change profile photo – outlined secondary CTA */}
                     <Button
+                      type="button"
                       variant="outlined"
-                      onClick={() => setStep("avatar")}
+                      onClick={() => {
+                        setIsUploading(false);
+                        setStep("avatar");
+                      }}
                       sx={{
                         mt: 0.5,
                         px: 3,
                         py: 0.9,
+                        mb: 2,
                         borderRadius: "50px",
                         borderColor: "rgba(255,255,255,0.35)",
                         color: "#fff",
@@ -1026,11 +1036,12 @@ export default function UploadAvatar({ params }: { params: Params }) {
                       mb: 3,
                     }}
                   >
-                    We couldn’t confidently match your selfie with your profile
-                    photo.
+                    Verification must match the face picture in your profile.
                     <br />
-                    This can happen due to poor lighting, angle, or face
-                    visibility.
+                    <strong style={{ color: "#fff" }}>
+                      Double check your profile picture and verification picture
+                      are of your face.
+                    </strong>
                   </Typography>
 
                   {/* 💡 Tips */}
@@ -1286,7 +1297,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
             <Typography variant="body2">{dialogMessage}</Typography>
           </DialogContent>
 
-          <DialogActions sx={{ px: 3, pb: 3 }}>
+          <DialogActions sx={{ px: 3, pb: 3, justifyContent: "center" }}>
             {dialogType === "success" ? (
               <Grid
                 item

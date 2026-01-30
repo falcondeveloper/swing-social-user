@@ -29,6 +29,8 @@ interface SwipingBlock {
 
 interface FormDataType {
   city: string;
+  travelMode: boolean;
+  travelLocation: string;
   swiping: SwipingBlock;
   maxDistance: number;
   distanceChecked: boolean;
@@ -59,6 +61,11 @@ const yourTextFieldSx = {
 
 const validationSchema = Yup.object({
   city: Yup.string().nullable(),
+  travelLocation: Yup.string().when("travelMode", {
+    is: true,
+    then: (schema) => schema.required("City is required"),
+  }),
+
   maxDistance: Yup.number().min(0).max(150),
 });
 
@@ -74,7 +81,7 @@ export default function PreferencesSheet({
   const [cityLoading, setCityLoading] = useState(false);
   const [openCity, setOpenCity] = useState(false);
   const [savedOptions, setSavedOptions] = useState<SavedOptionsType | null>(
-    null
+    null,
   );
   const [cityOptions, setCityOptions] = useState<string[]>([]);
   const [cityInput, setCityInput] = useState<string>("");
@@ -90,6 +97,8 @@ export default function PreferencesSheet({
   const formik = useFormik<FormDataType>({
     initialValues: {
       city: "",
+      travelMode: false,
+      travelLocation: "",
       swiping: { couples: false, singleMale: false, singleFemale: false },
       maxDistance: 50,
       distanceChecked: false,
@@ -172,6 +181,104 @@ export default function PreferencesSheet({
     })();
   }, [open, profileId]);
 
+  const renderTravelMode = () => (
+    <>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          color: "rgba(255,255,255,0.95)",
+          fontWeight: 700,
+          mt: 1,
+          mb: 2,
+          fontSize: 18,
+        }}
+      >
+        Travel Mode
+      </Typography>
+
+      <Typography
+        sx={{
+          color: "rgba(255,255,255,0.7)",
+          fontSize: 14,
+          mb: 2,
+          lineHeight: 1.6,
+        }}
+      >
+        Going somewhere soon? Travel Mode lets you explore and connect with
+        people in another city before you arrive.
+      </Typography>
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={formik.values.travelMode}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setNested("travelMode", checked);
+              if (!checked) {
+                setNested("travelLocation", "");
+                setCityInput("");
+                setOpenCity(false);
+              }
+            }}
+            sx={{
+              "& .MuiSvgIcon-root": { fontSize: 26 },
+              color: "#e91e63",
+              "&.Mui-checked": { color: "#e91e63" },
+            }}
+          />
+        }
+        label="Turn on Travel Mode"
+        sx={{ color: "white", mb: 1.5 }}
+      />
+
+      {formik.values.travelMode && (
+        <>
+          <Autocomplete
+            open={openCity}
+            onOpen={() => setOpenCity(true)}
+            onClose={() => setOpenCity(false)}
+            freeSolo={false}
+            options={cityOptions}
+            loading={cityLoading}
+            inputValue={cityInput}
+            value={formik.values.travelLocation}
+            onInputChange={(_, value) => setCityInput(value)}
+            onChange={(_, value) => {
+              setNested("travelLocation", value ?? "");
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Choose a city"
+                placeholder="Start typing a city name"
+                error={
+                  formik.touched.travelLocation &&
+                  Boolean(formik.errors.travelLocation)
+                }
+                helperText={
+                  formik.touched.travelLocation && formik.errors.travelLocation
+                }
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {cityLoading && (
+                        <CircularProgress size={16} color="inherit" />
+                      )}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+                sx={yourTextFieldSx}
+              />
+            )}
+          />
+        </>
+      )}
+    </>
+  );
+
   useEffect(() => {
     if (!savedOptions) return;
 
@@ -180,6 +287,8 @@ export default function PreferencesSheet({
 
     formik.setValues({
       city: savedOptions?.CityState ?? savedOptions?.City ?? "",
+      travelMode: Number(savedOptions?.TravelMode) === 1,
+      travelLocation: savedOptions?.TravelLocation ?? "",
       swiping: {
         couples: Number(savedOptions?.Couples) === 1,
         singleMale: Number(savedOptions?.SingleMales) === 1,
@@ -212,7 +321,7 @@ export default function PreferencesSheet({
     cityFetchTimer.current = window.setTimeout(async () => {
       try {
         const response = await fetch(
-          `/api/user/city?city=${encodeURIComponent(cityInput)}`
+          `/api/user/city?city=${encodeURIComponent(cityInput)}`,
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -220,7 +329,7 @@ export default function PreferencesSheet({
         const json = await response.json();
         const cities: any[] = json?.cities ?? [];
         const unique = Array.from(
-          new Set(cities.map((c) => (c?.City ?? c?.city ?? "").trim()))
+          new Set(cities.map((c) => (c?.City ?? c?.city ?? "").trim())),
         ).filter(Boolean);
         setCityOptions(unique);
       } catch (err) {
@@ -303,7 +412,7 @@ export default function PreferencesSheet({
                   onChange={(e) =>
                     setNested(
                       `swiping.${key}`,
-                      (e.target as HTMLInputElement).checked
+                      (e.target as HTMLInputElement).checked,
                     )
                   }
                   sx={{
@@ -325,8 +434,8 @@ export default function PreferencesSheet({
                     {key === "couples"
                       ? "Show to couple accounts"
                       : key === "singleMale"
-                      ? "Show to single male accounts"
-                      : "Show to single female accounts"}
+                        ? "Show to single male accounts"
+                        : "Show to single female accounts"}
                   </Typography>
                 </Box>
               </Box>
@@ -521,7 +630,7 @@ export default function PreferencesSheet({
                   onChange={(e) =>
                     setNested(
                       `block.${key}`,
-                      (e.target as HTMLInputElement).checked
+                      (e.target as HTMLInputElement).checked,
                     )
                   }
                   sx={{
@@ -543,8 +652,8 @@ export default function PreferencesSheet({
                     {key === "couples"
                       ? "Block couple accounts from seeing you"
                       : key === "singleMale"
-                      ? "Block single male accounts"
-                      : "Block single female accounts"}
+                        ? "Block single male accounts"
+                        : "Block single female accounts"}
                   </Typography>
                 </Box>
               </Box>
@@ -659,6 +768,7 @@ export default function PreferencesSheet({
 
   const tabContents = [
     { label: "Who to Block", content: renderWhoToBlock() },
+    { label: "Travel Mode", content: renderTravelMode() },
     { label: "Max Distance", content: renderMaxDistance() },
     { label: "Block Location", content: renderLocationToBlock() },
     { label: "Who Can See Me", content: renderWhoCanSeeMe() },
@@ -826,7 +936,7 @@ export default function PreferencesSheet({
             disabled={submitting || formik.isSubmitting}
           >
             {submitting || formik.isSubmitting ? (
-              <CircularProgress size={22} color="inherit" />
+              <CircularProgress size={22} sx={{ color: "#0f0f0f" }} />
             ) : (
               "Save"
             )}

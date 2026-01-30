@@ -16,7 +16,7 @@ export async function POST(req: any) {
   try {
     const result = await pool.query(
       "select * from public.get_preferences($1)",
-      [id]
+      [id],
     );
 
     return NextResponse.json({
@@ -24,11 +24,26 @@ export async function POST(req: any) {
       data: result?.rows,
     });
   } catch (error: any) {
+    console.error("=== GET PREFERENCES ERROR ===");
+    console.error("Error message:", error.message);
+    console.error("Error code:", error.code);
+    console.error("Error detail:", error.detail);
+    console.error("Error hint:", error.hint);
+    console.error("Error position:", error.position);
+    console.error("Error stack:", error.stack);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
+    console.error("Input ID:", id);
+    console.error("============================");
+
     return NextResponse.json(
       {
         message: "Relationship Category Update failed",
+        error: error.message,
+        errorCode: error.code,
+        errorDetail: error.detail,
+        errorHint: error.hint,
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }
