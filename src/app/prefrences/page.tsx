@@ -412,7 +412,7 @@ export default function Preferences() {
       )}
 
       {/* Travel Mode */}
-      <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">
+      {/* <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">
         Travel Mode
       </Typography>
       <FormControlLabel
@@ -494,7 +494,7 @@ export default function Preferences() {
             )}
           />
         </Box>
-      )}
+      )} */}
 
       {/* Blocking Preferences */}
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">

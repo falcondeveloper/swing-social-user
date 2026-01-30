@@ -18,7 +18,9 @@ export async function GET(req: Request) {
     let query = `SELECT * FROM public.get_swipescreenhome($1)`;
     const swipeResults = await pool.query(query, [userId]);
 
-    console.log("swipeResults?.rows", swipeResults);
+    console.log("LocationMessage:", swipeResults?.rows?.[0]?.LocationMessage);
+
+
 
     if (swipeResults?.rows?.length === 0) {
       return NextResponse.json({
