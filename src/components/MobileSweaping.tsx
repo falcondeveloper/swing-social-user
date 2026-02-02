@@ -112,7 +112,7 @@ export default function MobileSweaping() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userProfiles, setUserProfiles] = useState<any[]>([]);
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [loading, setLoading] = useState(true);
   const [showMatchPopup, setShowMatchPopup] = useState(false);
@@ -138,7 +138,7 @@ export default function MobileSweaping() {
   const [cardStyles, setCardStyles] = useState<any>({ active: {}, next: {} });
   const [isExiting, setIsExiting] = useState(false);
   const [pendingSwipeAction, setPendingSwipeAction] = useState<string | null>(
-    null
+    null,
   );
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
@@ -184,7 +184,7 @@ export default function MobileSweaping() {
 
       return await response.json();
     },
-    [profileId]
+    [profileId],
   );
 
   const handleUpdateLikeMatch = useCallback(
@@ -206,7 +206,7 @@ export default function MobileSweaping() {
           setId(targetProfile?.Id);
           sendNotification(
             `You have a new match with ${username}!`,
-            targetProfile
+            targetProfile,
           );
         }
         return data;
@@ -215,7 +215,7 @@ export default function MobileSweaping() {
         return null;
       }
     },
-    [profileId, sendNotification]
+    [profileId, sendNotification],
   );
 
   useEffect(() => {
@@ -238,7 +238,7 @@ export default function MobileSweaping() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
       const data = await response.json();
       const profiles = data?.swipes || [];
@@ -268,7 +268,7 @@ export default function MobileSweaping() {
       if (reason === "clickaway") return;
       setSnack((prev) => ({ ...prev, open: false }));
     },
-    []
+    [],
   );
 
   const preloadProfileImages = useCallback(
@@ -291,7 +291,7 @@ export default function MobileSweaping() {
         });
       });
     },
-    [membership, preloadedImages]
+    [membership, preloadedImages],
   );
 
   useEffect(() => {
@@ -318,7 +318,7 @@ export default function MobileSweaping() {
         return null;
       }
     },
-    [profileId]
+    [profileId],
   );
 
   const handleGrantAccess = useCallback(async () => {
@@ -361,7 +361,7 @@ export default function MobileSweaping() {
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
         const data = await response.json();
         const profiles = data?.swipes || [];
@@ -405,13 +405,13 @@ export default function MobileSweaping() {
 
         if (profileId && !isFetchingMore && remaining <= PREFETCH_THRESHOLD) {
           fetchNextBatchAndAppend().catch((err) =>
-            console.error("Prefetch failed:", err)
+            console.error("Prefetch failed:", err),
           );
         }
 
         if (profileId && nextIndex >= userProfiles.length && !isFetchingMore) {
           fetchNextBatchAndAppend().catch((err) =>
-            console.error("fetchNextBatch error:", err)
+            console.error("fetchNextBatch error:", err),
           );
         }
 
@@ -466,7 +466,7 @@ export default function MobileSweaping() {
       fetchNextBatchAndAppend,
       isFetchingMore,
       profileId,
-    ]
+    ],
   );
 
   const getEventPoint = (e: any) => (e.touches ? e.touches[0] : e);
@@ -590,7 +590,7 @@ export default function MobileSweaping() {
       setPendingSwipeAction,
       setIsExiting,
       setIsProcessingSwipe,
-    ]
+    ],
   );
 
   const handleSwipeEnd = useCallback(() => {
@@ -600,10 +600,10 @@ export default function MobileSweaping() {
     const swipeThreshold = 120;
     const { transform = "" } = cardStyles.active || {};
     const deltaX = parseFloat(
-      transform.match(/translateX\(([^p]+)px\)/)?.[1] || "0"
+      transform.match(/translateX\(([^p]+)px\)/)?.[1] || "0",
     );
     const deltaY = parseFloat(
-      transform.match(/translateY\(([^p]+)px\)/)?.[1] || "0"
+      transform.match(/translateY\(([^p]+)px\)/)?.[1] || "0",
     );
 
     let action = null;
@@ -706,9 +706,10 @@ export default function MobileSweaping() {
     }
   }, []);
 
-  const handleReportModalToggle = useCallback(() => {
+  const handleReportModalToggle = () => {
+    console.log("hii");
     setIsReportModalOpen((prev) => !prev);
-  }, []);
+  };
 
   const reportImageApi = async ({
     reportedById,
@@ -938,9 +939,6 @@ export default function MobileSweaping() {
                 fontSize: "24px",
                 letterSpacing: "-0.3px",
                 marginBottom: "10px",
-                fontFamily:
-                  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                textShadow: "0 2px 8px rgba(0,0,0,0.2)",
               }}
             >
               Add Public Photos
@@ -953,7 +951,7 @@ export default function MobileSweaping() {
                 maxWidth: "300px",
                 marginBottom: "28px",
                 fontWeight: 400,
-                fontFamily: "'Inter', sans-serif",
+
                 opacity: 0.95,
               }}
             >
@@ -981,7 +979,6 @@ export default function MobileSweaping() {
                   transform: "translateY(-2px)",
                 },
                 transition: "all 0.2s ease",
-                fontFamily: "'Inter', sans-serif",
                 minWidth: "200px",
                 display: "flex",
                 alignItems: "center",
@@ -1044,8 +1041,7 @@ export default function MobileSweaping() {
                 fontSize: "22px",
                 letterSpacing: "-0.2px",
                 marginBottom: "8px",
-                fontFamily:
-                  "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+
                 textShadow: "0 2px 6px rgba(0,0,0,0.3)",
               }}
             >
@@ -1060,7 +1056,6 @@ export default function MobileSweaping() {
                 maxWidth: "280px",
                 marginBottom: "24px",
                 fontWeight: 400,
-                fontFamily: "'Inter', sans-serif",
                 opacity: 0.9,
               }}
             >
@@ -1087,7 +1082,6 @@ export default function MobileSweaping() {
                   transform: "translateY(-2px)",
                 },
                 transition: "all 0.2s ease",
-                fontFamily: "'Inter', sans-serif",
                 minWidth: "200px",
                 display: "flex",
                 alignItems: "center",
@@ -1109,7 +1103,6 @@ export default function MobileSweaping() {
                 color: "rgba(255, 255, 255, 0.45)",
                 fontSize: "11px",
                 marginTop: "18px",
-                fontFamily: "'Inter', sans-serif",
                 maxWidth: "260px",
                 lineHeight: 1.4,
               }}
@@ -1125,7 +1118,7 @@ export default function MobileSweaping() {
 
   const getPreloadImages = (
     profile: any,
-    canAccessPrivate: boolean
+    canAccessPrivate: boolean,
   ): string[] => {
     const urls: string[] = [];
 
@@ -1144,6 +1137,40 @@ export default function MobileSweaping() {
     }
 
     return urls;
+  };
+
+  const ImageDots = ({ total, active }: { total: number; active: number }) => {
+    if (total <= 1) return null;
+
+    return (
+      <Box
+        sx={{
+          position: "absolute",
+          left: 14,
+          bottom: 24,
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          zIndex: 10,
+        }}
+      >
+        {Array.from({ length: total }).map((_, i) => {
+          const isActive = i === active;
+          return (
+            <Box
+              key={i}
+              sx={{
+                width: 6,
+                height: isActive ? 12 : 6,
+                borderRadius: 10,
+                backgroundColor: isActive ? "#fff" : "rgba(255,255,255,0.4)",
+                transition: "height 0.25s ease, background-color 0.25s ease",
+              }}
+            />
+          );
+        })}
+      </Box>
+    );
   };
 
   if (loading) {
@@ -1190,7 +1217,7 @@ export default function MobileSweaping() {
                 });
               }}
             />
-          ) : null
+          ) : null,
         )}
       </div>
 
@@ -1281,7 +1308,7 @@ export default function MobileSweaping() {
                             position: "relative",
                           }}
                         >
-                          <ProfileImage
+                          {/* <ProfileImage
                             src={currentSrc}
                             isPrivate={isPrivate}
                             isPublic={isPublic}
@@ -1289,7 +1316,21 @@ export default function MobileSweaping() {
                             isPremium={membership === 1}
                             publicImageCount={data?.PublicImage ?? 0}
                             onUpgrade={() => router.push("/membership")}
+                          /> */}
+
+                          <Box
+                            component="img"
+                            src={profile.Avatar || "/fallback-avatar.png"}
+                            alt={profile.Username}
+                            sx={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              border: "2px solid rgba(255, 255, 255, 0.35)",
+                              borderRadius: "20px",
+                            }}
                           />
+                          {/* <ImageDots total={all.length} active={imageIndex} /> */}
                           {profile?.selfie_verification_status === "true" && (
                             <Box
                               sx={{
@@ -1343,50 +1384,6 @@ export default function MobileSweaping() {
                         </Box>
                       );
                     })()}
-
-                    {[
-                      profile?.imgpriv1,
-                      profile?.imgpriv2,
-                      profile?.imgpriv3,
-                      profile?.imgpriv4,
-                      profile?.imgpriv5,
-                      profile?.imgpriv6,
-                      profile?.imgpub1,
-                      profile?.imgpub2,
-                      profile?.imgpub3,
-                      profile?.imgpub4,
-                      profile?.imgpub5,
-                      profile?.imgpub6,
-                    ].some(Boolean) ? (
-                      <Box
-                        sx={{
-                          position: "absolute",
-                          bottom: 12,
-                          left: 12,
-                          right: 12,
-                          display: "flex",
-                          gap: "6px",
-                        }}
-                      >
-                        {(() => {
-                          const { all } = getAllImages(profile);
-                          return all.map((_, i) => (
-                            <Box
-                              key={i}
-                              sx={{
-                                flex: 1,
-                                height: 4,
-                                borderRadius: 4,
-                                bgcolor:
-                                  i === imageIndex
-                                    ? "#fff"
-                                    : "rgba(255,255,255,0.35)",
-                              }}
-                            />
-                          ));
-                        })()}
-                      </Box>
-                    ) : null}
 
                     {index === 0 && cardStyles.active && (
                       <SwipeIndicator
@@ -1462,40 +1459,41 @@ export default function MobileSweaping() {
                       />
                     </IconButton>
 
-                    {/* <IconButton
-                    onClick={handleReportModalToggle}
-                    sx={{
-                      position: "absolute",
-                      bottom: 24,
-                      right: 14,
-                      width: 36,
-                      height: 36,
-                      bgcolor: "rgba(114, 114, 148, 0.5)",
-                      backdropFilter: "blur(8px)",
-                      WebkitBackdropFilter: "blur(8px)",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: 0,
-                      "&:hover": {
-                        bgcolor: "rgba(114, 114, 148, 0.65)",
-                      },
-                    }}
-                  >
-                    <Box
-                      component="img"
-                      src="/swiping-card/flag.svg"
-                      alt="info button"
+                    <IconButton
+                      onClick={handleReportModalToggle}
                       sx={{
-                        width: 16,
-                        height: 16,
-                        display: "block",
+                        position: "absolute",
+                        bottom: 24,
+                        right: 14,
+                        width: 36,
+                        height: 36,
+                        bgcolor: "rgba(114, 114, 148, 0.5)",
+                        backdropFilter: "blur(8px)",
+                        WebkitBackdropFilter: "blur(8px)",
+                        borderRadius: "50%",
+                        display: "flex",
+                        zIndex: 10,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 0,
+                        "&:hover": {
+                          bgcolor: "rgba(114, 114, 148, 0.65)",
+                        },
                       }}
-                    />
-                  </IconButton> */}
+                    >
+                      <Box
+                        component="img"
+                        src="/swiping-card/flag.svg"
+                        alt="info button"
+                        sx={{
+                          width: 16,
+                          height: 16,
+                          display: "block",
+                        }}
+                      />
+                    </IconButton>
 
-                    {[
+                    {/* {[
                       profile?.imgpriv1,
                       profile?.imgpriv2,
                       profile?.imgpriv3,
@@ -1576,7 +1574,7 @@ export default function MobileSweaping() {
                             e.stopPropagation();
                             const { all } = getAllImages(profile);
                             setImageIndex((prev) =>
-                              Math.min(prev + 1, all.length - 1)
+                              Math.min(prev + 1, all.length - 1),
                             );
                           }}
                         >
@@ -1592,7 +1590,7 @@ export default function MobileSweaping() {
                           />
                         </IconButton>
                       </Box>
-                    ) : null}
+                    ) : null} */}
                   </Box>
 
                   <Box
@@ -1816,7 +1814,7 @@ export default function MobileSweaping() {
                               }}
                             />
                           );
-                        }
+                        },
                       )}
                     </Box>
                   </Box>
@@ -2033,14 +2031,22 @@ export default function MobileSweaping() {
               <Button
                 variant="contained"
                 onClick={handleReportModalToggle}
-                sx={{ bgcolor: "#333", "&:hover": { bgcolor: "#444" } }}
+                sx={{
+                  bgcolor: "#333",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#444" },
+                }}
               >
                 Cancel
               </Button>
               <Button
                 variant="contained"
                 onClick={handleReportSubmit}
-                sx={{ bgcolor: "#f50057", "&:hover": { bgcolor: "#c51162" } }}
+                sx={{
+                  bgcolor: "#f50057",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#c51162" },
+                }}
               >
                 {isSubmitting ? (
                   <CircularProgress size={24} color="inherit" />
