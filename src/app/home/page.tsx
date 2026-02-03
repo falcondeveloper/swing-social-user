@@ -97,6 +97,8 @@ const Home = () => {
     }
   };
 
+  console.log("Profile ID:", profileId);
+
   useEffect(() => {
     if (profileId) {
       getCurrentLocation();
