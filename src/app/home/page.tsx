@@ -97,8 +97,6 @@ const Home = () => {
     }
   };
 
-  console.log("Profile ID:", profileId);
-  console.log("Profile ID:", profileId);
 
   useEffect(() => {
     if (profileId) {
