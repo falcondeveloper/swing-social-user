@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -401,6 +401,7 @@ const ProfileDetail: React.FC = () => {
   const [openCity, setOpenCity] = useState(false);
   const [cityOption, setCityOption] = useState<any>([]);
   const [cityInput, setCityInput] = useState<string>("");
+  const isEditingRef = useRef(false);
   const [previewImages, setPreviewImages] = useState<{
     banner: any | null;
     avatar: any | null;
@@ -895,6 +896,27 @@ const ProfileDetail: React.FC = () => {
       </Box>
     );
   };
+
+  useEffect(() => {
+    isEditingRef.current = isEditing;
+  }, [isEditing]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (isEditingRef.current) {
+        setEditedData(null);
+        setPreviewImages({
+          banner: null,
+          avatar: null,
+        });
+        setIsEditing(false);
+        return;
+      }
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const renderPersonalInfo = () => (
     <Card sx={{ mb: 3 }}>
@@ -1454,6 +1476,7 @@ const ProfileDetail: React.FC = () => {
       setCityInput(advertiser?.Location?.replace(", USA", "") || "");
     }
     setIsEditing(!isEditing);
+    window.history.pushState({}, "");
   };
 
   const handleSave = async () => {

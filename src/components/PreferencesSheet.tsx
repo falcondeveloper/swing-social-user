@@ -16,6 +16,7 @@ import {
   IconButton,
   Popper,
   PopperProps,
+  Drawer,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useFormik } from "formik";
@@ -775,11 +776,11 @@ export default function PreferencesSheet({
   ];
 
   return (
-    <SwipeableDrawer
+    <Drawer
       anchor="bottom"
       open={open}
-      onOpen={onOpen}
       onClose={onClose}
+      ModalProps={{ keepMounted: true }}
       PaperProps={{
         sx: {
           borderTopLeftRadius: 16,
@@ -943,6 +944,6 @@ export default function PreferencesSheet({
           </Button>
         </Box>
       </Box>
-    </SwipeableDrawer>
+    </Drawer>
   );
 }

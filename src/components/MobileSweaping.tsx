@@ -144,6 +144,9 @@ export default function MobileSweaping() {
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const [data, setData] = useState<any>(null);
+  const prefsOpenRef = useRef(false);
+  const showDetailRef = useRef(false);
+  const reportOpenRef = useRef(false);
 
   const [snack, setSnack] = useState({
     open: false,
@@ -151,8 +154,53 @@ export default function MobileSweaping() {
     severity: "success" as "success" | "error" | "info" | "warning",
   });
 
-  const openPrefs = () => setPrefsOpen(true);
-  const closePrefs = () => setPrefsOpen(false);
+  const openPrefs = () => {
+    setPrefsOpen(true);
+    window.history.pushState({}, "");
+  };
+
+  const closePrefs = () => {
+    setPrefsOpen(false);
+  };
+
+  useEffect(() => {
+    prefsOpenRef.current = prefsOpen;
+  }, [prefsOpen]);
+
+  useEffect(() => {
+    showDetailRef.current = showDetail;
+  }, [showDetail]);
+
+  useEffect(() => {
+    reportOpenRef.current = isReportModalOpen;
+  }, [isReportModalOpen]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      // 🔥 Close top-most UI first
+
+      if (reportOpenRef.current) {
+        setIsReportModalOpen(false);
+        return;
+      }
+
+      if (showDetailRef.current) {
+        setShowDetail(false);
+        setSelectedUserId(null);
+        return;
+      }
+
+      if (prefsOpenRef.current) {
+        setPrefsOpen(false);
+        return;
+      }
+
+      // otherwise allow normal navigation
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const visibleProfiles = useMemo(() => {
     return userProfiles.slice(currentIndex, currentIndex + 2);
@@ -685,9 +733,6 @@ export default function MobileSweaping() {
   const handleClose = () => {
     setShowDetail(false);
     setSelectedUserId(null);
-    if (window.history.state?.modal === "userProfile") {
-      window.history.back();
-    }
   };
 
   useEffect(() => {
@@ -707,8 +752,8 @@ export default function MobileSweaping() {
   }, []);
 
   const handleReportModalToggle = () => {
-    console.log("hii");
     setIsReportModalOpen((prev) => !prev);
+    window.history.pushState({}, "");
   };
 
   const reportImageApi = async ({
@@ -1425,7 +1470,7 @@ export default function MobileSweaping() {
                       onClick={() => {
                         setShowDetail(true);
                         setSelectedUserId(profile?.Id);
-                        window.history.pushState({ modal: "userProfile" }, "");
+                        window.history.pushState({}, "");
                       }}
                       sx={{
                         position: "absolute",
@@ -1607,7 +1652,7 @@ export default function MobileSweaping() {
                       onClick={() => {
                         setShowDetail(true);
                         setSelectedUserId(profile?.Id);
-                        window.history.pushState({ modal: "userProfile" }, "");
+                        window.history.pushState({}, "");
                       }}
                       sx={{
                         display: "flex",
@@ -2141,7 +2186,7 @@ export default function MobileSweaping() {
                   onClick={() => {
                     setShowDetail(true);
                     setSelectedUserId(matchedProfile?.Id);
-                    window.history.pushState({ modal: "userProfile" }, "");
+                    window.history.pushState({}, "");
                   }}
                   variant="contained"
                   sx={{
