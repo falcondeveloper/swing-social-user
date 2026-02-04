@@ -110,6 +110,8 @@ export default function Preferences() {
     },
   });
 
+  console.log("Formik Values:", formik.values);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const storedProfileId = localStorage.getItem("logged_in_profile");
