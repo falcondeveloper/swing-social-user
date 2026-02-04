@@ -133,6 +133,7 @@ export default function PreferencesSheet({
             if (typeof onSaved === "function") {
               onSaved();
               setActiveTab(0);
+              window.location.reload(); 
             }
           } catch (err) {
             console.error("onSaved callback error:", err);
@@ -769,7 +770,7 @@ export default function PreferencesSheet({
 
   const tabContents = [
     { label: "Who to Block", content: renderWhoToBlock() },
-    // { label: "Travel Mode", content: renderTravelMode() },
+    { label: "Travel Mode", content: renderTravelMode() },
     { label: "Max Distance", content: renderMaxDistance() },
     { label: "Block Location", content: renderLocationToBlock() },
     { label: "Who Can See Me", content: renderWhoCanSeeMe() },
