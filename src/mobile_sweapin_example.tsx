@@ -30,7 +30,7 @@ import InstructionModal from "@/components/InstructionModal";
 import UserProfileModal from "@/components/UserProfileModal";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
-import PreferencesSheet from "./PreferencesSheet";
+import PreferencesSheet from "./components/PreferencesSheet";
 import Loader from "@/commonPage/Loader";
 import AppHeaderMobile from "@/layout/AppHeaderMobile";
 import AppFooterMobile from "@/layout/AppFooterMobile";
