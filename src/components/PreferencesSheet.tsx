@@ -769,7 +769,7 @@ export default function PreferencesSheet({
 
   const tabContents = [
     { label: "Who to Block", content: renderWhoToBlock() },
-    { label: "Travel Mode", content: renderTravelMode() },
+    // { label: "Travel Mode", content: renderTravelMode() },
     { label: "Max Distance", content: renderMaxDistance() },
     { label: "Block Location", content: renderLocationToBlock() },
     { label: "Who Can See Me", content: renderWhoCanSeeMe() },
