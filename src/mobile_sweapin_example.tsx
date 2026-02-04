@@ -35,6 +35,10 @@ import Loader from "@/commonPage/Loader";
 import AppHeaderMobile from "@/layout/AppHeaderMobile";
 import AppFooterMobile from "@/layout/AppFooterMobile";
 import { ArrowRight, Camera, Crown, Lock, Upload } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Mousewheel } from "swiper/modules";
+
+import "swiper/css";
 
 export interface DetailViewHandle {
   open: (id: string) => void;
@@ -102,6 +106,7 @@ const SwipeIndicator = ({ type, opacity }: any) => {
 };
 
 export default function MobileSweaping() {
+  const imageSwiperRef = useRef<any>(null);
   const lastSwipeTimeRef = useRef<number>(0);
   const SWIPE_THROTTLE_MS = 0;
   const currentCardRef = useRef<HTMLDivElement | null>(null);
@@ -539,11 +544,13 @@ export default function MobileSweaping() {
 
     const isVertical = Math.abs(deltaY) > Math.abs(deltaX);
 
+    // ⬆️ Let Swiper handle UP
     if (isVertical && deltaY < 0) {
+      isSwiping.current = false;
       return;
     }
 
-    if (e.cancelable) {
+    if (!(isVertical && deltaY < 0) && e.cancelable) {
       e.preventDefault();
     }
 
@@ -1213,8 +1220,8 @@ export default function MobileSweaping() {
           gap: "6px",
           zIndex: 10,
         }}
-        onClick={(e) => e.stopPropagation()} // 🚫 prevent swipe
-        onTouchStart={(e) => e.stopPropagation()} // 🚫 prevent swipe
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         {Array.from({ length: total }).map((_, i) => {
           const isActive = i === active;
@@ -1333,7 +1340,7 @@ export default function MobileSweaping() {
                 sx={{
                   position: "absolute",
                   inset: 0,
-                  zIndex: 6,
+                  zIndex: 4,
                   touchAction: "none",
                 }}
                 onTouchStart={handleSwipeStart}
@@ -1354,19 +1361,6 @@ export default function MobileSweaping() {
                       const { publicImgs, privateImgs, all } =
                         getAllImages(profile);
 
-                      const isAvatar = imageIndex === 0 && !!profile.Avatar;
-
-                      const isPublic = imageIndex < publicImgs.length;
-
-                      const isPrivate =
-                        imageIndex >= publicImgs.length &&
-                        privateImgs.length > 0;
-
-                      const currentSrc =
-                        all[imageIndex] ||
-                        profile.Avatar ||
-                        "/fallback-avatar.png";
-
                       return (
                         <Box
                           sx={{
@@ -1378,36 +1372,80 @@ export default function MobileSweaping() {
                             position: "relative",
                           }}
                         >
-                          <ProfileImage
-                            src={currentSrc}
-                            isPrivate={isPrivate}
-                            isPublic={isPublic}
-                            isAvatar={isAvatar}
-                            isPremium={membership === 1}
-                            publicImageCount={data?.PublicImage ?? 0}
-                            onUpgrade={() => router.push("/membership")}
-                          />
+                          {/* IMAGE SWIPER (UP ONLY) */}
+                          <Box
+                            sx={{ position: "absolute", inset: 0, zIndex: 5 }}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onTouchMove={(e) => e.stopPropagation()}
+                            onTouchEnd={(e) => e.stopPropagation()}
+                          >
+                            <Swiper
+                              direction="vertical"
+                              slidesPerView={1}
+                              allowTouchMove
+                              resistanceRatio={0}
+                              threshold={20}
+                              touchStartPreventDefault={false}
+                              onTouchMove={(swiper) => {
+                                const diff =
+                                  swiper.touches.currentY -
+                                  swiper.touches.startY;
 
-                          {/* <Box
-                            component="img"
-                            src={profile.Avatar || "/fallback-avatar.png"}
-                            alt={profile.Username}
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              border: "2px solid rgba(255, 255, 255, 0.35)",
-                              borderRadius: "20px",
-                            }}
-                          /> */}
+                                if (diff > 0) {
+                                  swiper.allowSlidePrev = false; // block DOWN
+                                } else {
+                                  swiper.allowSlidePrev = true;
+                                }
+                              }}
+                              onSlideChange={(swiper) =>
+                                setImageIndex(swiper.activeIndex)
+                              }
+                              onSwiper={(swiper) =>
+                                (imageSwiperRef.current = swiper)
+                              }
+                              style={{ height: "100%" }}
+                            >
+                              {all.map((src: string, imgIndex: number) => {
+                                const isAvatar =
+                                  imgIndex === 0 && !!profile.Avatar;
+                                const isPublic = imgIndex < publicImgs.length;
+                                const isPrivate =
+                                  imgIndex >= publicImgs.length &&
+                                  privateImgs.length > 0;
+
+                                return (
+                                  <SwiperSlide key={imgIndex}>
+                                    <ProfileImage
+                                      src={
+                                        src ||
+                                        profile.Avatar ||
+                                        "/fallback-avatar.png"
+                                      }
+                                      isPrivate={isPrivate}
+                                      isPublic={isPublic}
+                                      isAvatar={isAvatar}
+                                      isPremium={membership === 1}
+                                      publicImageCount={data?.PublicImage ?? 0}
+                                      onUpgrade={() =>
+                                        router.push("/membership")
+                                      }
+                                    />
+                                  </SwiperSlide>
+                                );
+                              })}
+                            </Swiper>
+                          </Box>
+
+                          {/* DOTS */}
                           <ImageDots
                             total={all.length}
                             active={imageIndex}
-                            onSelect={(index) => {
-                              setImageIndex(index);
+                            onSelect={(i) => {
+                              imageSwiperRef.current?.slideTo(i);
                             }}
                           />
 
+                          {/* VERIFIED BADGE */}
                           {profile?.selfie_verification_status === "true" && (
                             <Box
                               sx={{
@@ -1421,7 +1459,6 @@ export default function MobileSweaping() {
                                 py: "6px",
                                 bgcolor: "rgba(0,0,0,0.6)",
                                 backdropFilter: "blur(40px)",
-                                WebkitBackdropFilter: "blur(40px)",
                                 borderRadius: "14px",
                                 zIndex: 10,
                               }}
@@ -1429,7 +1466,6 @@ export default function MobileSweaping() {
                               <Box
                                 component="img"
                                 src="/verified-badge.svg"
-                                alt="Verified"
                                 sx={{ width: 14, height: 14 }}
                               />
                               <Typography
@@ -1437,27 +1473,12 @@ export default function MobileSweaping() {
                                   fontSize: "12px",
                                   color: "#fff",
                                   fontWeight: 500,
-                                  lineHeight: 1,
-                                  whiteSpace: "nowrap",
                                 }}
                               >
                                 Profile Verified
                               </Typography>
                             </Box>
                           )}
-
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              inset: 0,
-                              zIndex: 2,
-                              touchAction: "none",
-                            }}
-                            onTouchStart={handleSwipeStart}
-                            onTouchMove={handleSwipeMove}
-                            onTouchEnd={handleSwipeEnd}
-                            onTouchCancel={handleSwipeEnd}
-                          />
                         </Box>
                       );
                     })()}
@@ -1613,11 +1634,7 @@ export default function MobileSweaping() {
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            const { all } = getAllImages(profile);
-
-                            setImageIndex((prev) =>
-                              prev === 0 ? all.length - 1 : prev - 1,
-                            );
+                            imageSwiperRef.current?.slidePrev();
                           }}
 
                           // disabled={imageIndex === 0}
@@ -1654,11 +1671,7 @@ export default function MobileSweaping() {
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            const { all } = getAllImages(profile);
-
-                            setImageIndex((prev) =>
-                              prev === all.length - 1 ? 0 : prev + 1,
-                            );
+                            imageSwiperRef.current?.slideNext();
                           }}
                         >
                           <Box
