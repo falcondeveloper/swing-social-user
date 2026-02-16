@@ -1078,7 +1078,6 @@ const RegisterPage = () => {
         BackdropProps={{
           sx: {
             backdropFilter: "blur(6px)",
-            
           },
         }}
         PaperProps={{
@@ -1092,9 +1091,11 @@ const RegisterPage = () => {
             border: "1px solid rgba(255,255,255,0.08)",
             boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
             color: "#fff",
+            position: "relative",
           },
         }}
       >
+        {/* Close Button */}
         <IconButton
           onClick={handleClose}
           sx={{
@@ -1108,7 +1109,7 @@ const RegisterPage = () => {
         </IconButton>
 
         <Stack spacing={3} alignItems="center" textAlign="center">
-          {/* Neon Icon */}
+          {/* Gradient Icon */}
           <Box
             sx={{
               width: 70,
@@ -1118,12 +1119,12 @@ const RegisterPage = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              // boxShadow: "0 0 30px rgba(255,45,85,0.6)",
             }}
           >
-            <PhoneAndroidIcon sx={{ fontSize: 30 }} />
+            <PhoneAndroidIcon sx={{ fontSize: 30, color: "#fff" }} />
           </Box>
 
+          {/* Title */}
           <Typography
             variant="h6"
             sx={{
@@ -1131,9 +1132,10 @@ const RegisterPage = () => {
               letterSpacing: 0.5,
             }}
           >
-            Verify Your Phone
+            Confirm Your Phone Number
           </Typography>
 
+          {/* Description */}
           <Typography
             sx={{
               fontSize: "0.9rem",
@@ -1141,9 +1143,11 @@ const RegisterPage = () => {
               lineHeight: 1.6,
             }}
           >
-            We've sent a one-time verification code to your phone number.
+            We’ll send a secure one-time verification code to your registered
+            phone number to confirm your identity.
           </Typography>
 
+          {/* Buttons */}
           <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
             <Button
               fullWidth
@@ -1161,7 +1165,7 @@ const RegisterPage = () => {
                 },
               }}
             >
-              Back
+              Cancel
             </Button>
 
             <Button
@@ -1173,13 +1177,12 @@ const RegisterPage = () => {
                 py: 1.2,
                 background: "linear-gradient(90deg, #FF2D55, #7000FF)",
                 color: "#fff",
-                // boxShadow: "0 8px 25px rgba(255,45,85,0.5)",
-                // "&:hover": {
-                //   opacity: 0.9,
-                // },
+                "&:hover": {
+                  opacity: 0.9,
+                },
               }}
             >
-              Continue
+              Send Code
             </Button>
           </Stack>
         </Stack>
