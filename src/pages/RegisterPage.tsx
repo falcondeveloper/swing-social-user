@@ -278,7 +278,7 @@ const RegisterPage = () => {
         const { cities }: { cities: CityType[] } = await response.json();
         const uniqueCities = cities.filter(
           (city, index, self) =>
-            index === self.findIndex((t) => t.City === city.City)
+            index === self.findIndex((t) => t.City === city.City),
         );
         setCityOption(uniqueCities);
       } catch (error) {
@@ -305,7 +305,7 @@ const RegisterPage = () => {
       .test(
         "password-strength",
         "Password is not strong enough",
-        (value) => calculatePasswordStrength(value || "") >= 60
+        (value) => calculatePasswordStrength(value || "") >= 60,
       ),
     repeatPassword: Yup.string()
       .required("Repeat your password")
@@ -314,7 +314,7 @@ const RegisterPage = () => {
     user_name: Yup.string().required("User Name is required"),
     consent: Yup.boolean().oneOf(
       [true],
-      "Please agree to the Privacy Policy & Terms"
+      "Please agree to the Privacy Policy & Terms",
     ),
   });
 
@@ -419,7 +419,7 @@ const RegisterPage = () => {
             });
             setTimeout(
               () => userNameRef.current?.focus({ preventScroll: true }),
-              250
+              250,
             );
           });
           return setSubmitting(false);
@@ -444,7 +444,7 @@ const RegisterPage = () => {
             });
             setTimeout(
               () => emailRef.current?.focus({ preventScroll: true }),
-              250
+              250,
             );
           });
           return setSubmitting(false);
@@ -762,8 +762,8 @@ const RegisterPage = () => {
                         passwordStrength < 40
                           ? "error"
                           : passwordStrength < 60
-                          ? "warning"
-                          : "success"
+                            ? "warning"
+                            : "success"
                       }
                       sx={{ height: 8, borderRadius: 4, mt: 1, mb: 0.5 }}
                     />
@@ -783,8 +783,8 @@ const RegisterPage = () => {
                             passwordStrength < 40
                               ? "#FF0000"
                               : passwordStrength < 60
-                              ? "#FFA000"
-                              : "#00C853",
+                                ? "#FFA000"
+                                : "#00C853",
                         }}
                       >
                         {passwordStrength < 40 && "Weak"}
@@ -1075,125 +1075,114 @@ const RegisterPage = () => {
       <Dialog
         open={open}
         onClose={handleClose}
-        aria-labelledby="phone-verification-title"
-        aria-describedby="phone-verification-desc"
+        BackdropProps={{
+          sx: {
+            backdropFilter: "blur(6px)",
+            
+          },
+        }}
         PaperProps={{
           sx: {
             width: "100%",
-            maxWidth: 480,
-            mx: { xs: 1.5, sm: "auto" },
-            borderRadius: { xs: 2, sm: 3 },
-            p: { xs: 2, sm: 3 },
-            background: "linear-gradient(180deg, #ffffff 0%, #faf7fa 100%)",
-            border: "1px solid rgba(194,24,91,0.12)",
-            boxShadow:
-              "0 10px 30px rgba(194,24,91,0.15), 0 2px 8px rgba(0,0,0,0.06)",
+            maxWidth: 380,
+            borderRadius: 4,
+            p: 3,
+            background: "rgba(20, 10, 35, 0.85)",
+            backdropFilter: "blur(25px)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+            color: "#fff",
           },
         }}
       >
-        <DialogTitle
-          id="phone-verification-title"
+        <IconButton
+          onClick={handleClose}
           sx={{
-            fontWeight: 800,
-            pr: 6,
-            textAlign: "center",
-            color: "#1a1a1a",
+            position: "absolute",
+            right: 10,
+            top: 10,
+            color: "rgba(255,255,255,0.5)",
           }}
         >
-          Phone Verification
-          <IconButton
-            onClick={handleClose}
-            aria-label="Close"
+          <CloseIcon />
+        </IconButton>
+
+        <Stack spacing={3} alignItems="center" textAlign="center">
+          {/* Neon Icon */}
+          <Box
             sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-              color: "rgba(0,0,0,0.54)",
+              width: 70,
+              height: 70,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #FF2D55, #7000FF)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              // boxShadow: "0 0 30px rgba(255,45,85,0.6)",
             }}
           >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
+            <PhoneAndroidIcon sx={{ fontSize: 30 }} />
+          </Box>
 
-        <DialogContent sx={{ pt: 1 }}>
-          <Stack spacing={1.5} alignItems="center" textAlign="center">
-            <Avatar
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+              letterSpacing: 0.5,
+            }}
+          >
+            Verify Your Phone
+          </Typography>
+
+          <Typography
+            sx={{
+              fontSize: "0.9rem",
+              color: "rgba(255,255,255,0.75)",
+              lineHeight: 1.6,
+            }}
+          >
+            We've sent a one-time verification code to your phone number.
+          </Typography>
+
+          <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={handleClose}
               sx={{
-                bgcolor: "#c2185b",
-                width: 48,
-                height: 48,
-                boxShadow: "0 6px 14px rgba(194,24,91,0.35)",
+                borderRadius: 3,
+                fontWeight: 600,
+                py: 1.2,
+                borderColor: "rgba(255,255,255,0.3)",
+                color: "#fff",
+                "&:hover": {
+                  borderColor: "#FF2D55",
+                  backgroundColor: "rgba(255,45,85,0.1)",
+                },
               }}
             >
-              <PhoneAndroidIcon />
-            </Avatar>
+              Back
+            </Button>
 
-            <DialogContentText
-              id="phone-verification-desc"
+            <Button
+              fullWidth
+              onClick={handleContinue}
               sx={{
-                color: "#333",
-                fontSize: { xs: "0.95rem", sm: "1rem" },
-                lineHeight: 1.6,
-                maxWidth: 360,
+                borderRadius: 3,
+                fontWeight: 700,
+                py: 1.2,
+                background: "linear-gradient(90deg, #FF2D55, #7000FF)",
+                color: "#fff",
+                // boxShadow: "0 8px 25px rgba(255,45,85,0.5)",
+                // "&:hover": {
+                //   opacity: 0.9,
+                // },
               }}
             >
-              We’ve sent a one-time code to your phone number via SMS.
-            </DialogContentText>
-
-            <Typography
-              variant="body2"
-              sx={{ color: "#6b6b6b", maxWidth: 360 }}
-            >
-              Didn’t receive it? Try resending the code or check your network
-              signal.
-            </Typography>
+              Continue
+            </Button>
           </Stack>
-        </DialogContent>
-
-        <DialogActions
-          sx={{
-            mt: 1.5,
-            gap: 1,
-            px: { xs: 2, sm: 3 },
-            pb: { xs: 2, sm: 3 },
-            justifyContent: "center",
-            flexDirection: "row",
-            flexWrap: "nowrap",
-          }}
-        >
-          <Button
-            onClick={handleClose}
-            variant="outlined"
-            sx={{
-              borderColor: "#c2185b",
-              color: "#c2185b",
-              fontWeight: 700,
-              px: 3,
-              py: 1.1,
-              minWidth: 120,
-              "&:hover": {
-                borderColor: "#ad1457",
-                backgroundColor: "rgba(194,24,91,0.06)",
-              },
-            }}
-          >
-            Back
-          </Button>
-          <Button
-            onClick={handleContinue}
-            sx={{
-              backgroundColor: "#c2185b",
-              color: "#fff",
-              fontWeight: 700,
-              px: 3,
-              py: 1.1,
-              minWidth: 120,
-              "&:hover": { backgroundColor: "#ad1457" },
-            }}
-          >
-            Continue
-          </Button>
-        </DialogActions>
+        </Stack>
       </Dialog>
     </>
   );

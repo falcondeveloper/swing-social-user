@@ -12,9 +12,9 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import Swal from "sweetalert2";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import { useRouter } from "next/navigation";
+import PaymentDialog, { DialogType } from "@/components/PaymentDialog";
 
 type Params = Promise<{ id: string }>;
 
@@ -66,6 +66,22 @@ export default function Payment(props: { params: Params }) {
 
   const [errors, setErrors] = useState<any>({});
 
+  const [dialogState, setDialogState] = useState<{
+    open: boolean;
+    type: DialogType;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  }>({
+    open: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
+
   useEffect(() => {
     const getIdFromParam = async () => {
       const params = await props.params;
@@ -81,7 +97,7 @@ export default function Payment(props: { params: Params }) {
     setPromoCode(promoCodeText);
     if (promoCodeText) {
       let filter = promoCodeList.filter(
-        (val: any) => val?.PromoCodeText === promoCodeText
+        (val: any) => val?.PromoCodeText === promoCodeText,
       );
       if (filter?.length > 0) {
         console.log(filter[0].DisplayMessage, "=====filter");
@@ -118,7 +134,7 @@ export default function Payment(props: { params: Params }) {
 
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
       );
 
       if (!response.ok) {
@@ -149,7 +165,7 @@ export default function Payment(props: { params: Params }) {
         },
         (error) => {
           console.error("Geolocation error:", error);
-        }
+        },
       );
     } else {
       console.error("Geolocation is not supported by this browser.");
@@ -203,7 +219,7 @@ export default function Payment(props: { params: Params }) {
     if (value.length > 6) {
       value = `(${value.substring(0, 3)}) ${value.substring(
         3,
-        6
+        6,
       )}-${value.substring(6)}`;
     } else if (value.length > 3) {
       value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
@@ -285,7 +301,7 @@ export default function Payment(props: { params: Params }) {
   };
 
   const validateReferral = async (
-    code?: string | null
+    code?: string | null,
   ): Promise<ReferralValidationResult> => {
     if (!code) {
       console.log("No referral code provided — skipping validation.");
@@ -495,53 +511,51 @@ export default function Payment(props: { params: Params }) {
               await handleUpdateMembershipStatus(id, pprice);
             }
             setOpen(false);
-            Swal.fire({
+            setDialogState({
+              open: true,
+              type: "success",
               title: `Thank you ${userName}!`,
-              text: "You will now be directed to Swing Social soon!",
-              icon: "success",
-              confirmButtonText: "OK",
-            }).then((result) => {
-              if (result?.isConfirmed) {
+              message: "You will now be directed to Swing Social soon!",
+              confirmText: "Continue",
+              onConfirm: () => {
+                setDialogState((prev) => ({ ...prev, open: false }));
                 handleLogin(userName, password);
-              }
+              },
             });
           } else {
             setOpen(false);
-            Swal.fire({
-              title: `Error`,
-              text: `Sorry, we are unable to process.`,
-              icon: "error",
-              confirmButtonText: "Edit the card",
-              cancelButtonText: "Continue as the free member",
-            }).then((result) => {
-              if (result.isConfirmed) {
+            setDialogState({
+              open: true,
+              type: "error",
+              title: "Payment Failed",
+              message: "Sorry, we are unable to process your payment.",
+              confirmText: "Edit Card",
+              cancelText: "Continue as Free Member",
+              onConfirm: () => {
+                setDialogState((prev) => ({ ...prev, open: false }));
                 setOpen(true);
-              } else if (result.dismiss === Swal.DismissReason.cancel) {
-                Swal.fire({
-                  title: `Thank you ${userName}!`,
-                  text: "You will now be directed to login again to confirm your account and start using Swing Social!",
-                  icon: "success",
-                  confirmButtonText: "OK",
-                }).then((result) => {
-                  if (result?.isConfirmed) {
-                    handleLogin(userName, password);
-                  }
-                });
-              }
+              },
+              onCancel: () => {
+                setDialogState((prev) => ({ ...prev, open: false }));
+                handleLogin(userName, password);
+              },
             });
           }
         }
       } catch (error) {
         console.error("Error submitting form:", error);
         setOpen(false);
-        Swal.fire({
-          title: "Error",
-          text: "An unexpected error occurred. Please try again.",
-          icon: "error",
-          confirmButtonText: "OK",
+        setDialogState({
+          open: true,
+          type: "error",
+          title: "Unexpected Error",
+          message: "An unexpected error occurred. Please try again.",
+          confirmText: "OK",
+          onConfirm: () => {
+            setDialogState((prev) => ({ ...prev, open: false }));
+          },
         });
       } finally {
-        // Always reset processing state
         setIsProcessing(false);
       }
     }
@@ -785,6 +799,7 @@ export default function Payment(props: { params: Params }) {
             textTransform: "none",
             backgroundColor: "#f50057",
             py: 1.5,
+            color: "#fff",
             fontSize: "16px",
             fontWeight: "bold",
             "&:hover": {
@@ -948,6 +963,17 @@ export default function Payment(props: { params: Params }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <PaymentDialog
+        open={dialogState.open}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
     </Suspense>
   );
 }
