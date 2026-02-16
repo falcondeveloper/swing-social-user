@@ -170,7 +170,7 @@ export default function EventDetail(props: { params: Params }) {
         });
       }
     },
-    [isMobile]
+    [isMobile],
   );
 
   const handleGetEventDetail = async (eventId: any) => {
@@ -340,7 +340,7 @@ export default function EventDetail(props: { params: Params }) {
 
       if (recipients.length === 0) {
         setError(
-          "Please select at least one recipient group (RSVP or Attendee)."
+          "Please select at least one recipient group (RSVP or Attendee).",
         );
         setLoading(false);
         return;
@@ -452,13 +452,13 @@ export default function EventDetail(props: { params: Params }) {
   const handleCloseDownloadModal = () => setOpenDownloadModal(false);
 
   const handleDownloadAttendeeChange = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     setDownloadAttendee(event.target.checked);
   };
 
   const handleDownloadRsvpChange = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     setDownloadRsvp(event.target.checked);
   };
@@ -511,7 +511,7 @@ export default function EventDetail(props: { params: Params }) {
 
       if (!userResponse.ok) {
         throw new Error(
-          `Error al obtener datos de usuario: ${userResponse.statusText}`
+          `Error al obtener datos de usuario: ${userResponse.statusText}`,
         );
       }
 
@@ -523,7 +523,7 @@ export default function EventDetail(props: { params: Params }) {
 
       const csvData = userData.users.map((user: any) => {
         const originalEntry = data.find(
-          (entry: any) => entry.ProfileId === user.ProfileId
+          (entry: any) => entry.ProfileId === user.ProfileId,
         );
 
         return {
@@ -778,7 +778,7 @@ export default function EventDetail(props: { params: Params }) {
                             color="primary"
                             onClick={() =>
                               router.push(
-                                `/events/edit?q=${eventDetail?.EventId}`
+                                `/events/edit?q=${eventDetail?.EventId}`,
                               )
                             }
                             sx={{
@@ -936,7 +936,10 @@ export default function EventDetail(props: { params: Params }) {
                         onClick={() => {
                           setShowDetail(true);
                           setSelectedUserId(eventDetail?.OrganizerId);
-                          window.history.pushState({ modal: "userProfile" }, "");
+                          window.history.pushState(
+                            { modal: "userProfile" },
+                            "",
+                          );
                         }}
                       >
                         <TableCell
@@ -996,6 +999,7 @@ export default function EventDetail(props: { params: Params }) {
                       sx={{
                         background: "#aa1f72",
                         width: "20%",
+                        color: "#fff",
                         marginLeft: "auto",
                         marginRight: "auto",
                         marginTop: 2,
@@ -1130,6 +1134,7 @@ export default function EventDetail(props: { params: Params }) {
                         width: { lg: "30%", md: "30%", sm: "100%", xs: "100%" },
                         marginLeft: "auto",
                         marginRight: "auto",
+                        color: "#fff",
                         marginTop: 2,
                         borderRadius: "10px", // Rounded corners
                         padding: "10px 20px", // Adjust padding to make it look better
@@ -1739,7 +1744,10 @@ export default function EventDetail(props: { params: Params }) {
                               ? () => {
                                   setShowDetail(true);
                                   setSelectedUserId(eventDetail?.OrganizerId);
-                                  window.history.pushState({ modal: "userProfile" }, "");
+                                  window.history.pushState(
+                                    { modal: "userProfile" },
+                                    "",
+                                  );
                                 }
                               : undefined
                           }
@@ -1982,6 +1990,7 @@ export default function EventDetail(props: { params: Params }) {
                         disabled={loadingEmail}
                         sx={{
                           bgcolor: "#880E4F",
+                          color: "#fff",
                           "&:hover": { bgcolor: "#560027" },
                         }}
                       >

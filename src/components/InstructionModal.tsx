@@ -68,6 +68,7 @@ export default function InstructionModal() {
               color="primary"
               sx={{
                 textTransform: "none",
+                color: "#fff",
                 backgroundColor: "#C2185B",
                 "&:hover": { backgroundColor: "#C2185C" },
               }}

@@ -136,9 +136,15 @@ export async function POST(req: any) {
       message: "Your profile is updated successfully!",
       status: 200,
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("PROFILE UPDATE ERROR:", error);
+
     return NextResponse.json({
       message: "Relationship Category Update failed",
+      error: error.message,
+      detail: error.detail,
+      hint: error.hint,
+      code: error.code,
       status: 400,
     });
   }

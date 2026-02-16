@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import Loader from "@/commonPage/Loader";
 
 type DialogType = "success" | "error";
 
@@ -54,6 +55,7 @@ const page = () => {
   const [userId, setUserId] = useState<string>("");
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isInitLoading, setIsInitLoading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +68,51 @@ const page = () => {
     setDialogMessage(message);
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const tokenDevice = localStorage.getItem("loginInfo");
+    if (!tokenDevice) {
+      router.push("/login");
+      return;
+    }
+
+    const init = async () => {
+      try {
+        const decodedToken: any = jwtDecode(tokenDevice);
+
+        const userId = decodedToken?.profileId;
+
+        if (!userId) {
+          throw new Error("Invalid token");
+        }
+
+        setUserId(userId);
+        setIsInitLoading(true);
+        const response = await fetch(`/api/user/sweeping/user?id=${userId}`);
+
+        const data = await response.json();
+
+        const user = data?.user;
+
+        const alreadyUploaded = localStorage.getItem("avatarS3Uploaded");
+
+        if (!user?.Avatar || alreadyUploaded) return;
+        setIsInitLoading(true);
+        await uploadAvatarFromLocalStorage(userId, user.Avatar);
+      } catch (error) {
+        console.error("Initialization failed:", error);
+
+        localStorage.removeItem("loginInfo");
+        router.push("/login");
+      } finally {
+        setIsInitLoading(false);
+      }
+    };
+
+    init();
+  }, []);
 
   async function uploadAvatarFromLocalStorage(
     userId: string,
@@ -130,36 +177,6 @@ const page = () => {
 
     return key;
   }
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const tokenDevice = localStorage.getItem("loginInfo");
-    if (!tokenDevice) {
-      router.push("/login");
-      return;
-    }
-
-    try {
-      const decodeToken: any = jwtDecode(tokenDevice);
-      setUserId(decodeToken?.profileId);
-
-      const id = decodeToken?.profileId;
-      console.log("id", id);
-      const avatarUrl = decodeToken?.avatar;
-      const alreadyUploaded = localStorage.getItem("avatarS3Uploaded");
-
-      if (!avatarUrl || !id || alreadyUploaded) return;
-
-      uploadAvatarFromLocalStorage(id, avatarUrl).catch((err) => {
-        console.error("Avatar upload failed:", err);
-        setError("Failed to prepare avatar for verification");
-      });
-    } catch (err) {
-      localStorage.removeItem("loginInfo");
-      router.push("/login");
-    }
-  }, []);
 
   const formik = useFormik({
     initialValues: {
@@ -250,6 +267,32 @@ const page = () => {
       input.click();
     }
   }, []);
+
+  if (isInitLoading) {
+    return (
+      <Box
+        sx={{
+          height: "100dvh",
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "#121212",
+        }}
+      >
+        <AppHeaderMobile />
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Loader />
+        </Box>
+        <AppFooterMobile />
+      </Box>
+    );
+  }
 
   return (
     <>

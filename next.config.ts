@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     reactStrictMode: true,
+
     images: {
         remotePatterns: [
             {
@@ -10,7 +11,14 @@ const nextConfig: NextConfig = {
             },
         ],
     },
-    allowedDevOrigins: ['local-origin.dev', '*.local-origin.dev'],
+
+    allowedDevOrigins: [
+        "localhost",
+        "127.0.0.1",
+        "192.168.1.7",      // 👈 VERY IMPORTANT
+    ],
+
+    turbopack: {}, // 👈 fixes Issue #2 (explained below)
 };
 
 export default nextConfig;

@@ -107,6 +107,7 @@ export default function MobileSweaping() {
   const currentCardRef = useRef<HTMLDivElement | null>(null);
   const isSwiping = useRef(false);
   const startPoint = useRef({ x: 0, y: 0 });
+  const swipeDeltaRef = useRef({ x: 0, y: 0 });
   const router = useRouter();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -143,6 +144,10 @@ export default function MobileSweaping() {
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
+  const [imageStyle, setImageStyle] = useState({
+    transform: "translate(0,0)",
+    transition: "transform 0s",
+  });
   const [data, setData] = useState<any>(null);
   const prefsOpenRef = useRef(false);
   const showDetailRef = useRef(false);
@@ -524,10 +529,13 @@ export default function MobileSweaping() {
     isSwiping.current = true;
     const point = getEventPoint(e);
     startPoint.current = { x: point.clientX, y: point.clientY };
+    swipeDeltaRef.current = { x: 0, y: 0 };
+
     setCardStyles((prev: any) => ({
       ...prev,
       active: { ...prev.active, transition: "transform 0s" },
     }));
+    setImageStyle((prev) => ({ ...prev, transition: "none" }));
   };
 
   const handleSwipeMove = (e: any) => {
@@ -537,48 +545,70 @@ export default function MobileSweaping() {
     const deltaY = point.clientY - startPoint.current.y;
     const rotate = deltaX * 0.1;
 
+    let swipeType: string | null = null;
+    let swipeOpacity = 0;
+    const nextCardScale = 0.95 + Math.min(Math.abs(deltaX) / 2000, 0.05);
+
     const isVertical = Math.abs(deltaY) > Math.abs(deltaX);
 
-    if (isVertical && deltaY < 0) {
-      return;
-    }
+    swipeDeltaRef.current = { x: deltaX, y: deltaY };
 
-    if (e.cancelable) {
-      e.preventDefault();
-    }
+    if (isVertical) {
+      if (deltaY > 0) {
+        if (deltaY > 50) swipeType = "maybe";
+        swipeOpacity = Math.min(deltaY / 100, 1);
 
-    let swipeType = null;
-    let swipeOpacity = 0;
-
-    if (hasReachedSwipeLimit() && !isUserPremium()) {
-      setShowLimitPopup(true);
-    }
-
-    if (isVertical && deltaY > 0) {
-      if (deltaY > 50) swipeType = "maybe";
-      swipeOpacity = Math.min(deltaY / 100, 1);
+        setCardStyles({
+          active: {
+            transform: `translateX(${deltaX}px) translateY(${deltaY}px) rotate(${rotate}deg)`,
+            swipeType,
+            swipeOpacity,
+            transition: "transform 0s",
+          },
+          next: {
+            transform: `scale(${nextCardScale})`,
+            transition: `transform 0.2s ease-out`,
+          },
+        });
+        setImageStyle({ transform: "translate(0,0)", transition: "none" });
+      } else {
+        // Upward swipe -> Move Image Only
+        setCardStyles({
+          active: {
+            transform: `scale(1)`,
+            swipeType: null,
+            swipeOpacity: 0,
+            transition: "transform 0s",
+          },
+          next: {
+            transform: `scale(${nextCardScale})`,
+            transition: `transform 0.2s ease-out`,
+          },
+        });
+        setImageStyle({
+          transform: `translateY(${deltaY}px)`,
+          transition: "none",
+        });
+      }
     } else {
       if (deltaX > 50) swipeType = "like";
       if (deltaX < -50) swipeType = "delete";
       swipeOpacity = Math.min(Math.abs(deltaX) / 100, 1);
+
+      setCardStyles({
+        active: {
+          transform: `translateX(${deltaX}px) translateY(0px) rotate(${rotate}deg)`,
+          swipeType,
+          swipeOpacity,
+          transition: "transform 0s",
+        },
+        next: {
+          transform: `scale(${nextCardScale})`,
+          transition: `transform 0.2s ease-out`,
+        },
+      });
+      setImageStyle({ transform: "translate(0,0)", transition: "none" });
     }
-
-    const nextCardScale = 0.95 + Math.min(Math.abs(deltaX) / 2000, 0.05);
-
-    setCardStyles({
-      active: {
-        transform: `translateX(${deltaX}px) translateY(${
-          isVertical ? deltaY : 0
-        }px) rotate(${rotate}deg)`,
-        swipeType,
-        swipeOpacity,
-        transition: "transform 0s",
-      },
-      next: {
-        transform: `scale(${nextCardScale})`,
-        transition: `transform 0.2s ease-out`,
-      },
-    });
   };
 
   const triggerExitAnimation = useCallback(
@@ -638,23 +668,61 @@ export default function MobileSweaping() {
   );
 
   const handleSwipeEnd = useCallback(() => {
-    if (!isSwiping.current || isProcessingSwipe || isExiting) return;
     isSwiping.current = false;
 
     const swipeThreshold = 120;
-    const { transform = "" } = cardStyles.active || {};
-    const deltaX = parseFloat(
-      transform.match(/translateX\(([^p]+)px\)/)?.[1] || "0",
-    );
-    const deltaY = parseFloat(
-      transform.match(/translateY\(([^p]+)px\)/)?.[1] || "0",
-    );
+    const { x: deltaX, y: deltaY } = swipeDeltaRef.current;
 
     let action = null;
     if (deltaX > swipeThreshold) action = "like";
     else if (deltaX < -swipeThreshold) action = "delete";
     else if (deltaY > swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX))
       action = "maybe";
+    else if (deltaY < -swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX)) {
+      // Swipe Up -> Next Image Animation
+      // 1. Slide out to top
+      setImageStyle({
+        transform: `translateY(${-window.innerHeight}px)`,
+        transition: "transform 0.3s ease-out",
+      });
+
+      setTimeout(() => {
+        // 2. Change Image
+        const { all } = getAllImages(currentProfile);
+        setImageIndex((prev) => (prev === all.length - 1 ? 0 : prev + 1));
+
+        // 3. Reset to bottom (instant)
+        setImageStyle({
+          transform: `translateY(${window.innerHeight}px)`,
+          transition: "none",
+        });
+
+        // 4. Slide in from bottom
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setImageStyle({
+              transform: "translateY(0)",
+              transition: "transform 0.3s ease-out",
+            });
+          });
+        });
+      }, 300);
+
+      // Reset card styles just in case
+      setCardStyles({
+        active: {
+          transform: "scale(1)",
+          transition: `transform 0.4s ${spring}`,
+          swipeType: null,
+          swipeOpacity: 0,
+        },
+        next: {
+          transform: "scale(0.95)",
+          transition: `transform 0.4s ${spring}`,
+        },
+      });
+      return;
+    }
 
     if (action) {
       if (!isUserPremium() && hasReachedSwipeLimit()) {
@@ -675,6 +743,12 @@ export default function MobileSweaping() {
       }
       triggerExitAnimation(action);
     } else {
+      // Reset Image if it was moved but not enough
+      setImageStyle({
+        transform: "translateY(0)",
+        transition: "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+      });
+
       setCardStyles({
         active: {
           transform: "scale(1)",
@@ -1206,15 +1280,15 @@ export default function MobileSweaping() {
       <Box
         sx={{
           position: "absolute",
-          left: 14,
+          right: 14,
           bottom: 14,
           display: "flex",
           flexDirection: "column",
           gap: "6px",
           zIndex: 10,
         }}
-        onClick={(e) => e.stopPropagation()} // 🚫 prevent swipe
-        onTouchStart={(e) => e.stopPropagation()} // 🚫 prevent swipe
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         {Array.from({ length: total }).map((_, i) => {
           const isActive = i === active;
@@ -1225,8 +1299,8 @@ export default function MobileSweaping() {
               onClick={() => onSelect(i)}
               onTouchStart={() => onSelect(i)}
               sx={{
-                width: 6,
-                height: isActive ? 14 : 6,
+                width: 8,
+                height: isActive ? 20 : 8,
                 borderRadius: 10,
                 backgroundColor: isActive ? "#fff" : "rgba(255,255,255,0.4)",
                 transition: "all 0.2s ease",
@@ -1378,28 +1452,27 @@ export default function MobileSweaping() {
                             position: "relative",
                           }}
                         >
-                          <ProfileImage
-                            src={currentSrc}
-                            isPrivate={isPrivate}
-                            isPublic={isPublic}
-                            isAvatar={isAvatar}
-                            isPremium={membership === 1}
-                            publicImageCount={data?.PublicImage ?? 0}
-                            onUpgrade={() => router.push("/membership")}
-                          />
-
-                          {/* <Box
-                            component="img"
-                            src={profile.Avatar || "/fallback-avatar.png"}
-                            alt={profile.Username}
+                          <Box
                             sx={{
                               width: "100%",
                               height: "100%",
-                              objectFit: "cover",
-                              border: "2px solid rgba(255, 255, 255, 0.35)",
-                              borderRadius: "20px",
+                              transform:
+                                index === 0 ? imageStyle.transform : "none",
+                              transition:
+                                index === 0 ? imageStyle.transition : "none",
                             }}
-                          /> */}
+                          >
+                            <ProfileImage
+                              src={currentSrc}
+                              isPrivate={isPrivate}
+                              isPublic={isPublic}
+                              isAvatar={isAvatar}
+                              isPremium={membership === 1}
+                              publicImageCount={data?.PublicImage ?? 0}
+                              onUpgrade={() => router.push("/membership")}
+                            />
+                          </Box>
+
                           <ImageDots
                             total={all.length}
                             active={imageIndex}
@@ -1412,8 +1485,8 @@ export default function MobileSweaping() {
                             <Box
                               sx={{
                                 position: "absolute",
-                                bottom: 14,
-                                left: 30,
+                                bottom: 8,
+                                left: 8,
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "6px",
@@ -1570,7 +1643,7 @@ export default function MobileSweaping() {
                       />
                     </IconButton> */}
 
-                    {[
+                    {/* {[
                       profile?.imgpriv1,
                       profile?.imgpriv2,
                       profile?.imgpriv3,
@@ -1620,7 +1693,7 @@ export default function MobileSweaping() {
                             );
                           }}
 
-                          // disabled={imageIndex === 0}
+                        // disabled={imageIndex === 0}
                         >
                           <Box
                             component="img"
@@ -1673,7 +1746,7 @@ export default function MobileSweaping() {
                           />
                         </IconButton>
                       </Box>
-                    ) : null}
+                    ) : null} */}
                   </Box>
 
                   <Box
