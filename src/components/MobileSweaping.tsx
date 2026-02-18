@@ -974,14 +974,6 @@ export default function MobileSweaping() {
     onUpgrade: () => void;
   }) => {
     const isPrivateLocked = isPrivate && !isPremium;
-    const MIN_PUBLIC_IMAGES = 2;
-    const remainingPublicImages = Math.max(
-      MIN_PUBLIC_IMAGES - publicImageCount,
-      0,
-    );
-
-    const isPublicLocked =
-      isPublic && !isAvatar && publicImageCount < MIN_PUBLIC_IMAGES;
 
     return (
       <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
@@ -992,121 +984,9 @@ export default function MobileSweaping() {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            filter: isPrivateLocked || isPublicLocked ? "blur(20px)" : "none",
+            filter: isPrivateLocked ? "blur(20px)" : "none",
           }}
         />
-
-        {isPublicLocked && (
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              textAlign: "center",
-              padding: "24px",
-              borderRadius: "20px",
-              border: "1px solid rgba(255,255,255,0.12)",
-              // zIndex: 200,
-              pointerEvents: "auto",
-            }}
-          >
-            {/* Icon */}
-            <Box
-              sx={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                mb: "20px",
-              }}
-            >
-              <Camera style={{ color: "#fff", width: 32, height: 32 }} />
-            </Box>
-
-            {/* Title */}
-            <Typography
-              sx={{
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: "22px",
-                mb: "8px",
-              }}
-            >
-              Public Photos Required
-            </Typography>
-
-            {/* Progress */}
-            <Typography
-              sx={{
-                color: "#F50057",
-                fontWeight: 700,
-                fontSize: "16px",
-                mb: "6px",
-              }}
-            >
-              {publicImageCount} / {MIN_PUBLIC_IMAGES} uploaded
-            </Typography>
-
-            {/* Explanation */}
-            <Typography
-              sx={{
-                color: "rgba(255,255,255,0.85)",
-                fontSize: "14px",
-                lineHeight: 1.6,
-                maxWidth: 300,
-                mb: "8px",
-              }}
-            >
-              Upload <b>{remainingPublicImages}</b> more public photo
-              {remainingPublicImages > 1 ? "s" : ""} to view other members’
-              public photos.
-            </Typography>
-
-            {/* CTA */}
-            <Button
-              variant="contained"
-              onClick={() => router.push("/profile")}
-              sx={{
-                background: "linear-gradient(135deg, #F50057 0%, #D5004C 100%)",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: "15px",
-                mb: "6px",
-                padding: "14px 36px",
-                borderRadius: "30px",
-                textTransform: "none",
-                boxShadow: "0 6px 20px rgba(245,0,87,0.35)",
-                display: "flex",
-                alignItems: "center",
-                zIndex: 9999,
-                gap: "8px",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                },
-              }}
-            >
-              Go to Profile
-              <ArrowRight size={18} strokeWidth={2.4} />
-            </Button>
-
-            {/* How-to */}
-            <Typography
-              sx={{
-                color: "rgba(255,255,255,0.6)",
-                fontSize: "13px",
-                mb: "22px",
-              }}
-            >
-              Go to <b>Profile → Edit → Public Photos</b>
-            </Typography>
-          </Box>
-        )}
 
         {/* {!isPublicLocked && isPrivateLocked && (
           <Box
@@ -1446,10 +1326,10 @@ export default function MobileSweaping() {
                             sx={{
                               width: "100%",
                               height: "100%",
-                              // transform:
-                              //   index === 0 ? imageStyle.transform : "none",
-                              // transition:
-                              //   index === 0 ? imageStyle.transition : "none",
+                              transform:
+                                index === 0 ? imageStyle.transform : "none",
+                              transition:
+                                index === 0 ? imageStyle.transition : "none",
                             }}
                           >
                             <ProfileImage
