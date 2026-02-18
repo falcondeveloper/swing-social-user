@@ -1446,10 +1446,10 @@ export default function MobileSweaping() {
                             sx={{
                               width: "100%",
                               height: "100%",
-                              transform:
-                                index === 0 ? imageStyle.transform : "none",
-                              transition:
-                                index === 0 ? imageStyle.transition : "none",
+                              // transform:
+                              //   index === 0 ? imageStyle.transform : "none",
+                              // transition:
+                              //   index === 0 ? imageStyle.transition : "none",
                             }}
                           >
                             <ProfileImage
