@@ -1,6 +1,5 @@
 import FormData from "form-data";
 import Mailgun from "mailgun.js";
-
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
 
