@@ -133,7 +133,7 @@ export default function PreferencesSheet({
             if (typeof onSaved === "function") {
               onSaved();
               setActiveTab(0);
-              window.location.reload(); 
+              window.location.reload();
             }
           } catch (err) {
             console.error("onSaved callback error:", err);
@@ -182,104 +182,6 @@ export default function PreferencesSheet({
       }
     })();
   }, [open, profileId]);
-
-  const renderTravelMode = () => (
-    <>
-      <Typography
-        variant="subtitle1"
-        sx={{
-          color: "rgba(255,255,255,0.95)",
-          fontWeight: 700,
-          mt: 1,
-          mb: 2,
-          fontSize: 18,
-        }}
-      >
-        Travel Mode
-      </Typography>
-
-      <Typography
-        sx={{
-          color: "rgba(255,255,255,0.7)",
-          fontSize: 14,
-          mb: 2,
-          lineHeight: 1.6,
-        }}
-      >
-        Going somewhere soon? Travel Mode lets you explore and connect with
-        people in another city before you arrive.
-      </Typography>
-
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={formik.values.travelMode}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setNested("travelMode", checked);
-              if (!checked) {
-                setNested("travelLocation", "");
-                setCityInput("");
-                setOpenCity(false);
-              }
-            }}
-            sx={{
-              "& .MuiSvgIcon-root": { fontSize: 26 },
-              color: "#e91e63",
-              "&.Mui-checked": { color: "#e91e63" },
-            }}
-          />
-        }
-        label="Turn on Travel Mode"
-        sx={{ color: "white", mb: 1.5 }}
-      />
-
-      {formik.values.travelMode && (
-        <>
-          <Autocomplete
-            open={openCity}
-            onOpen={() => setOpenCity(true)}
-            onClose={() => setOpenCity(false)}
-            freeSolo={false}
-            options={cityOptions}
-            loading={cityLoading}
-            inputValue={cityInput}
-            value={formik.values.travelLocation}
-            onInputChange={(_, value) => setCityInput(value)}
-            onChange={(_, value) => {
-              setNested("travelLocation", value ?? "");
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Choose a city"
-                placeholder="Start typing a city name"
-                error={
-                  formik.touched.travelLocation &&
-                  Boolean(formik.errors.travelLocation)
-                }
-                helperText={
-                  formik.touched.travelLocation && formik.errors.travelLocation
-                }
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {cityLoading && (
-                        <CircularProgress size={16} color="inherit" />
-                      )}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-                sx={yourTextFieldSx}
-              />
-            )}
-          />
-        </>
-      )}
-    </>
-  );
 
   useEffect(() => {
     if (!savedOptions) return;
@@ -357,7 +259,7 @@ export default function PreferencesSheet({
     setActiveTab(index);
   };
 
-  const renderWhoCanSeeMe = () => {
+  const renderWhoToBlock = () => {
     const items: { key: keyof SwipingBlock; label: string }[] = [
       { key: "couples", label: "Couples" },
       { key: "singleMale", label: "Single Males" },
@@ -377,17 +279,10 @@ export default function PreferencesSheet({
             lineHeight: 1.3,
           }}
         >
-          Who can see me when they are swiping or searching?
+          Who should I block when I am swiping?
         </Typography>
 
-        <Box
-          component="fieldset"
-          sx={{
-            border: "none",
-            m: 0,
-            p: 0,
-          }}
-        >
+        <Box component="fieldset" sx={{ border: "none", m: 0, p: 0 }}>
           <Box
             sx={{
               display: "grid",
@@ -409,11 +304,11 @@ export default function PreferencesSheet({
                 }}
               >
                 <Checkbox
-                  name={`swiping.${key}`}
-                  checked={(formik.values.swiping as any)[key]}
+                  name={`block.${key}`}
+                  checked={(formik.values.block as any)[key]}
                   onChange={(e) =>
                     setNested(
-                      `swiping.${key}`,
+                      `block.${key}`,
                       (e.target as HTMLInputElement).checked,
                     )
                   }
@@ -434,10 +329,10 @@ export default function PreferencesSheet({
                     sx={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}
                   >
                     {key === "couples"
-                      ? "Show to couple accounts"
+                      ? "Block couple accounts from seeing you"
                       : key === "singleMale"
-                        ? "Show to single male accounts"
-                        : "Show to single female accounts"}
+                        ? "Block single male accounts"
+                        : "Block single female accounts"}
                   </Typography>
                 </Box>
               </Box>
@@ -447,6 +342,117 @@ export default function PreferencesSheet({
       </>
     );
   };
+
+  const renderTravelMode = () => (
+    <>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          color: "rgba(255,255,255,0.95)",
+          fontWeight: 700,
+          mt: 1,
+          mb: 1,
+          fontSize: 18,
+        }}
+      >
+        Travel Mode
+      </Typography>
+
+      <Typography
+        sx={{
+          color: "rgba(255,255,255,0.7)",
+          fontSize: 14,
+          mb: 2,
+          lineHeight: 1.6,
+        }}
+      >
+        Going somewhere soon? Travel Mode lets you explore and connect with
+        people in another city before you arrive.
+      </Typography>
+
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          bgcolor: "rgba(255,255,255,0.02)",
+          borderRadius: 1,
+          p: 1,
+          px: 1.25,
+          mb: 2,
+        }}
+      >
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={formik.values.travelMode}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setNested("travelMode", checked);
+                if (!checked) {
+                  setNested("travelLocation", "");
+                  setCityInput("");
+                  setOpenCity(false);
+                }
+              }}
+              sx={{
+                "& .MuiSvgIcon-root": { fontSize: 28, marginLeft: "9px" },
+                color: "#e91e63",
+                "&.Mui-checked": { color: "#e91e63" },
+              }}
+            />
+          }
+          label="Turn on Travel Mode"
+          sx={{ color: "white" }}
+        />
+      </Box>
+
+      {formik.values.travelMode && (
+        <>
+          <Autocomplete
+            open={openCity}
+            onOpen={() => setOpenCity(true)}
+            onClose={() => setOpenCity(false)}
+            freeSolo={false}
+            options={cityOptions}
+            loading={cityLoading}
+            inputValue={cityInput}
+            value={formik.values.travelLocation}
+            onInputChange={(_, value) => setCityInput(value)}
+            onChange={(_, value) => {
+              setNested("travelLocation", value ?? "");
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Choose a city"
+                placeholder="Start typing a city name"
+                error={
+                  formik.touched.travelLocation &&
+                  Boolean(formik.errors.travelLocation)
+                }
+                helperText={
+                  formik.touched.travelLocation && formik.errors.travelLocation
+                }
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {cityLoading && (
+                        <CircularProgress size={16} color="inherit" />
+                      )}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+                sx={yourTextFieldSx}
+              />
+            )}
+          />
+        </>
+      )}
+    </>
+  );
 
   const renderMaxDistance = () => {
     return (
@@ -582,94 +588,6 @@ export default function PreferencesSheet({
     );
   };
 
-  const renderWhoToBlock = () => {
-    const items: { key: keyof SwipingBlock; label: string }[] = [
-      { key: "couples", label: "Couples" },
-      { key: "singleMale", label: "Single Males" },
-      { key: "singleFemale", label: "Single Females" },
-    ];
-
-    return (
-      <>
-        <Typography
-          variant="subtitle1"
-          sx={{
-            color: "rgba(255,255,255,0.9)",
-            fontWeight: 700,
-            mt: 1,
-            mb: 2,
-            fontSize: 18,
-            lineHeight: 1.3,
-          }}
-        >
-          Who should I block when I am swiping?
-        </Typography>
-
-        <Box component="fieldset" sx={{ border: "none", m: 0, p: 0 }}>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 1.25,
-            }}
-          >
-            {items.map(({ key, label }) => (
-              <Box
-                key={key}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  bgcolor: "rgba(255,255,255,0.02)",
-                  borderRadius: 1,
-                  p: 1,
-                  px: 1.25,
-                }}
-              >
-                <Checkbox
-                  name={`block.${key}`}
-                  checked={(formik.values.block as any)[key]}
-                  onChange={(e) =>
-                    setNested(
-                      `block.${key}`,
-                      (e.target as HTMLInputElement).checked,
-                    )
-                  }
-                  sx={{
-                    "& .MuiSvgIcon-root": { fontSize: 28 },
-                    color: "#e91e63",
-                    "&.Mui-checked": { color: "#e91e63" },
-                  }}
-                />
-
-                <Box>
-                  <Typography
-                    sx={{ fontSize: 15, fontWeight: 600, color: "white" }}
-                  >
-                    {label}
-                  </Typography>
-                  <Typography
-                    sx={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}
-                  >
-                    {key === "couples"
-                      ? "Block couple accounts from seeing you"
-                      : key === "singleMale"
-                        ? "Block single male accounts"
-                        : "Block single female accounts"}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      </>
-    );
-  };
-
-  function CustomPopper(props: PopperProps) {
-    return <Popper {...props} placement="top-start" />;
-  }
-
   const renderLocationToBlock = () => (
     <>
       <Typography
@@ -767,6 +685,101 @@ export default function PreferencesSheet({
       </Box>
     </>
   );
+
+  const renderWhoCanSeeMe = () => {
+    const items: { key: keyof SwipingBlock; label: string }[] = [
+      { key: "couples", label: "Couples" },
+      { key: "singleMale", label: "Single Males" },
+      { key: "singleFemale", label: "Single Females" },
+    ];
+
+    return (
+      <>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            color: "rgba(255,255,255,0.9)",
+            fontWeight: 700,
+            mt: 1,
+            mb: 2,
+            fontSize: 18,
+            lineHeight: 1.3,
+          }}
+        >
+          Who can see me when they are swiping or searching?
+        </Typography>
+
+        <Box
+          component="fieldset"
+          sx={{
+            border: "none",
+            m: 0,
+            p: 0,
+          }}
+        >
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 1.25,
+            }}
+          >
+            {items.map(({ key, label }) => (
+              <Box
+                key={key}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  bgcolor: "rgba(255,255,255,0.02)",
+                  borderRadius: 1,
+                  p: 1,
+                  px: 1.25,
+                }}
+              >
+                <Checkbox
+                  name={`swiping.${key}`}
+                  checked={(formik.values.swiping as any)[key]}
+                  onChange={(e) =>
+                    setNested(
+                      `swiping.${key}`,
+                      (e.target as HTMLInputElement).checked,
+                    )
+                  }
+                  sx={{
+                    "& .MuiSvgIcon-root": { fontSize: 28 },
+                    color: "#e91e63",
+                    "&.Mui-checked": { color: "#e91e63" },
+                  }}
+                />
+
+                <Box>
+                  <Typography
+                    sx={{ fontSize: 15, fontWeight: 600, color: "white" }}
+                  >
+                    {label}
+                  </Typography>
+                  <Typography
+                    sx={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}
+                  >
+                    {key === "couples"
+                      ? "Show to couple accounts"
+                      : key === "singleMale"
+                        ? "Show to single male accounts"
+                        : "Show to single female accounts"}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </>
+    );
+  };
+
+  function CustomPopper(props: PopperProps) {
+    return <Popper {...props} placement="top-start" />;
+  }
 
   const tabContents = [
     { label: "Who to Block", content: renderWhoToBlock() },

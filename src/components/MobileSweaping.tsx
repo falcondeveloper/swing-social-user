@@ -743,7 +743,6 @@ export default function MobileSweaping() {
       }
       triggerExitAnimation(action);
     } else {
-      // Reset Image if it was moved but not enough
       setImageStyle({
         transform: "translateY(0)",
         transition: "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
@@ -1491,11 +1490,10 @@ export default function MobileSweaping() {
                                 alignItems: "center",
                                 gap: "6px",
                                 px: "10px",
-                                py: "6px",
-                                bgcolor: "rgba(0,0,0,0.6)",
-                                backdropFilter: "blur(40px)",
-                                WebkitBackdropFilter: "blur(40px)",
-                                borderRadius: "14px",
+                                py: "4px",
+                                background:
+                                  "linear-gradient(135deg, #ff4d6d, #ff758f)",
+                                borderRadius: "20px",
                                 zIndex: 10,
                               }}
                             >
@@ -1503,15 +1501,20 @@ export default function MobileSweaping() {
                                 component="img"
                                 src="/verified-badge.svg"
                                 alt="Verified"
-                                sx={{ width: 14, height: 14 }}
+                                sx={{
+                                  width: 14,
+                                  height: 14,
+                                  filter: "brightness(0) invert(1)",
+                                }}
                               />
                               <Typography
                                 sx={{
-                                  fontSize: "12px",
+                                  fontSize: "10px",
                                   color: "#fff",
-                                  fontWeight: 500,
+                                  fontWeight: 600,
                                   lineHeight: 1,
                                   whiteSpace: "nowrap",
+                                  letterSpacing: "0.3px",
                                 }}
                               >
                                 Profile Verified

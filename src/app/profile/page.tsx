@@ -1850,28 +1850,38 @@ const ProfileDetail: React.FC = () => {
                       {advertiser?.selfie_verification_status === "true" ? (
                         <Box
                           sx={{
-                            transform: "translateX(-50%)",
-                            bgcolor: "rgba(255, 255, 255, 0.9)",
-                            color: "#e91e63",
-                            ml: 6,
-                            px: 1.5,
-                            py: 0.3,
-                            borderRadius: "20px",
-                            fontSize: "12px",
-                            fontWeight: 700,
                             display: "flex",
                             alignItems: "center",
-                            gap: 0.6,
-                            backdropFilter: "blur(6px)",
-                            boxShadow: "0 4px 12px rgba(233, 30, 99, 0.2)",
-                            border: "1px solid rgba(233, 30, 99, 0.3)",
-                            zIndex: 1,
+                            gap: "6px",
+                            px: "10px",
+                            py: "4px",
+                            background:
+                              "linear-gradient(135deg, #ff4d6d, #ff758f)",
+                            borderRadius: "20px",
                           }}
                         >
-                          <CheckCircleIcon
-                            sx={{ fontSize: 14, color: "#4CAF50" }}
+                          <Box
+                            component="img"
+                            src="/verified-badge.svg"
+                            alt="Verified"
+                            sx={{
+                              width: 14,
+                              height: 14,
+                              filter: "brightness(0) invert(1)",
+                            }}
                           />
-                          Verified
+                          <Typography
+                            sx={{
+                              fontSize: "10px",
+                              color: "#fff",
+                              fontWeight: 600,
+                              lineHeight: 1,
+                              whiteSpace: "nowrap",
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            Profile Verified
+                          </Typography>
                         </Box>
                       ) : (
                         <Button
@@ -1888,7 +1898,7 @@ const ProfileDetail: React.FC = () => {
                             fontWeight: 700,
                             textTransform: "none",
                             color: "#fff",
-                            backgroundColor: "#1D9BF0", // Official "Verified Blue"
+                            backgroundColor: "#1D9BF0",
                             boxShadow: "0 2px 8px rgba(29, 155, 240, 0.25)",
                             transition: "all 0.2s ease-in-out",
                             "&:hover": {

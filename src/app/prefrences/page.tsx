@@ -110,8 +110,6 @@ export default function Preferences() {
     },
   });
 
-  console.log("Formik Values:", formik.values);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     const storedProfileId = localStorage.getItem("logged_in_profile");
@@ -414,7 +412,7 @@ export default function Preferences() {
       )}
 
       {/* Travel Mode */}
-      {/* <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">
+      <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">
         Travel Mode
       </Typography>
       <FormControlLabel
@@ -424,7 +422,6 @@ export default function Preferences() {
             onChange={(e) => {
               const isChecked = e.target.checked;
               setNested("travelMode", isChecked);
-              // Clear travel location when unchecking travel mode
               if (!isChecked) {
                 setNested("travelLocation", "");
               }
@@ -496,7 +493,7 @@ export default function Preferences() {
             )}
           />
         </Box>
-      )} */}
+      )}
 
       {/* Blocking Preferences */}
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }} color="white">

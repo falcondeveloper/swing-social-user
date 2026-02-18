@@ -518,23 +518,44 @@ If you didn't expect this, ignore this message.
                       />
 
                       {advertiser?.selfie_verification_status === "true" && (
-                        <Chip
-                          icon={
-                            <CheckCircleIcon
-                              sx={{ color: "#4CAF50 !important", fontSize: 16 }}
-                            />
-                          }
-                          label="Profile Verified"
-                          size="small"
+                        <Box
                           sx={{
-                            width: "fit-content",
-                            bgcolor: "rgba(255,255,255,0.9)",
-                            fontWeight: 600,
-                            border: "1px solid rgba(76,175,80,0.4)",
-                            backdropFilter: "blur(6px)",
-                            color: "#e91e63",
+                            position: "absolute",
+                            bottom: 8,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            px: "10px",
+                            py: "4px",
+                            background:
+                              "linear-gradient(135deg, #ff4d6d, #ff758f)",
+                            borderRadius: "20px",
+                            zIndex: 10,
                           }}
-                        />
+                        >
+                          <Box
+                            component="img"
+                            src="/verified-badge.svg"
+                            alt="Verified"
+                            sx={{
+                              width: 14,
+                              height: 14,
+                              filter: "brightness(0) invert(1)",
+                            }}
+                          />
+                          <Typography
+                            sx={{
+                              fontSize: "10px",
+                              color: "#fff",
+                              fontWeight: 600,
+                              lineHeight: 1,
+                              whiteSpace: "nowrap",
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            Profile Verified
+                          </Typography>
+                        </Box>
                       )}
                     </Box>
                   </Box>
