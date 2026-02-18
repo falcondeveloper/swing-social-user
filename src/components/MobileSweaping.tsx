@@ -572,7 +572,6 @@ export default function MobileSweaping() {
         });
         setImageStyle({ transform: "translate(0,0)", transition: "none" });
       } else {
-        // Upward swipe -> Move Image Only
         setCardStyles({
           active: {
             transform: `scale(1)`,
@@ -679,25 +678,18 @@ export default function MobileSweaping() {
     else if (deltaY > swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX))
       action = "maybe";
     else if (deltaY < -swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX)) {
-      // Swipe Up -> Next Image Animation
-      // 1. Slide out to top
       setImageStyle({
         transform: `translateY(${-window.innerHeight}px)`,
         transition: "transform 0.3s ease-out",
       });
 
       setTimeout(() => {
-        // 2. Change Image
         const { all } = getAllImages(currentProfile);
         setImageIndex((prev) => (prev === all.length - 1 ? 0 : prev + 1));
-
-        // 3. Reset to bottom (instant)
         setImageStyle({
           transform: `translateY(${window.innerHeight}px)`,
           transition: "none",
         });
-
-        // 4. Slide in from bottom
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             setImageStyle({
@@ -708,7 +700,6 @@ export default function MobileSweaping() {
         });
       }, 300);
 
-      // Reset card styles just in case
       setCardStyles({
         active: {
           transform: "scale(1)",
