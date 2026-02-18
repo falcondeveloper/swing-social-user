@@ -1108,7 +1108,7 @@ export default function MobileSweaping() {
           </Box>
         )}
 
-        {!isPublicLocked && isPrivateLocked && (
+        {/* {!isPublicLocked && isPrivateLocked && (
           <Box
             sx={{
               position: "absolute",
@@ -1227,7 +1227,7 @@ export default function MobileSweaping() {
               privacy
             </Typography>
           </Box>
-        )}
+        )} */}
       </Box>
     );
   };
