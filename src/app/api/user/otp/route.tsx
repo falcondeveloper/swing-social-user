@@ -33,9 +33,9 @@ async function sendErrorEmail(errorMessage: string) {
     });
 
     const recipients = [
-      "falconsoftmobile@gmail.com",
+      // "falconsoftmobile@gmail.com",
       "baldhavansh2505@gmail.com",
-      "latuttle22@gmail.com",
+      // "latuttle22@gmail.com",
     ];
 
     await mg.messages.create("swingsocial.co", {
