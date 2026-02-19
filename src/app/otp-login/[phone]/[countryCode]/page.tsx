@@ -111,7 +111,7 @@ const validationSchema = Yup.object({
     .of(
       Yup.string()
         .matches(/^[0-9]$/, "Must be a digit")
-        .required("Required")
+        .required("Required"),
     )
     .min(4, "Must be 4 digits")
     .max(4, "Must be 4 digits"),
@@ -153,7 +153,7 @@ const Page = ({
         const enteredCode = values.otp.join("");
         const res = await fetch(
           `/api/user/otp?countryCode=${countryCode}&mobileNumber=${phone}&verificationId=${otpData?.verificationId}&code=${enteredCode}`,
-          { method: "GET" }
+          { method: "GET" },
         );
 
         const data = await res.json();
@@ -207,7 +207,7 @@ const Page = ({
 
     if (value && index < newOtp.length - 1) {
       const nextInput = document.getElementById(
-        `otp-${index + 1}`
+        `otp-${index + 1}`,
       ) as HTMLInputElement;
       nextInput?.focus();
     }
@@ -215,15 +215,31 @@ const Page = ({
 
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
-    index: number
+    index: number,
   ) => {
     if (event.key === "Backspace" && !formik.values.otp[index] && index > 0) {
       const prevInput = document.getElementById(
-        `otp-${index - 1}`
+        `otp-${index - 1}`,
       ) as HTMLInputElement;
       prevInput?.focus();
     }
   };
+
+  // const handleVerificationPhone = async (phone: string) => {
+  //   try {
+  //     const res = await fetch("/api/user/otp", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ phone, countryCode }),
+  //     });
+  //     if (!res.ok) throw new Error("Failed to send OTP");
+  //     const data = await res.json();
+  //     setResendTimer(90);
+  //     setOtpData(data?.data);
+  //   } catch (error) {
+  //     console.error("Error:", error);
+  //   }
+  // };
 
   const handleVerificationPhone = async (phone: string) => {
     try {
@@ -232,12 +248,17 @@ const Page = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, countryCode }),
       });
-      if (!res.ok) throw new Error("Failed to send OTP");
+
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Failed to send OTP");
+      }
+
       setResendTimer(90);
       setOtpData(data?.data);
-    } catch (error) {
-      console.error("Error:", error);
+    } catch (error: any) {
+      console.error("OTP Error:", error);
     }
   };
 
