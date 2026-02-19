@@ -678,40 +678,26 @@ export default function MobileSweaping() {
     else if (deltaY > swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX))
       action = "maybe";
     else if (deltaY < -swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX)) {
+      const { all } = getAllImages(currentProfile);
+      if (!all.length) return;
+
+      // Slide container up (reveals next image instantly)
       setImageStyle({
-        transform: `translateY(${-window.innerHeight}px)`,
-        transition: "transform 0.3s ease-out",
+        transform: "translateY(-50%)",
+        transition: "transform 0.35s ease-out",
       });
 
+      // After animation completes, reset position & update index
       setTimeout(() => {
-        const { all } = getAllImages(currentProfile);
-        setImageIndex((prev) => (prev === all.length - 1 ? 0 : prev + 1));
+        setImageIndex((prev) => (prev + 1) % all.length);
+
+        // Reset without visual jump
         setImageStyle({
-          transform: `translateY(${window.innerHeight}px)`,
+          transform: "translateY(0)",
           transition: "none",
         });
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setImageStyle({
-              transform: "translateY(0)",
-              transition: "transform 0.3s ease-out",
-            });
-          });
-        });
-      }, 300);
+      }, 350);
 
-      setCardStyles({
-        active: {
-          transform: "scale(1)",
-          transition: `transform 0.4s ${spring}`,
-          swipeType: null,
-          swipeOpacity: 0,
-        },
-        next: {
-          transform: "scale(0.95)",
-          transition: `transform 0.4s ${spring}`,
-        },
-      });
       return;
     }
 
@@ -980,6 +966,8 @@ export default function MobileSweaping() {
         <Box
           component="img"
           src={src}
+          loading="eager"
+          decoding="async"
           sx={{
             width: "100%",
             height: "100%",
@@ -1310,6 +1298,8 @@ export default function MobileSweaping() {
                         all[imageIndex] ||
                         profile.Avatar ||
                         "/fallback-avatar.png";
+                      const nextIndex = (imageIndex + 1) % all.length;
+                      const nextSrc = all[nextIndex] || currentSrc;
 
                       return (
                         <Box
@@ -1326,21 +1316,49 @@ export default function MobileSweaping() {
                             sx={{
                               width: "100%",
                               height: "100%",
-                              transform:
-                                index === 0 ? imageStyle.transform : "none",
-                              transition:
-                                index === 0 ? imageStyle.transition : "none",
+                              position: "relative",
+                              overflow: "hidden",
                             }}
                           >
-                            <ProfileImage
-                              src={currentSrc}
-                              isPrivate={isPrivate}
-                              isPublic={isPublic}
-                              isAvatar={isAvatar}
-                              isPremium={membership === 1}
-                              publicImageCount={data?.PublicImage ?? 0}
-                              onUpgrade={() => router.push("/membership")}
-                            />
+                            {/* Sliding wrapper */}
+                            <Box
+                              sx={{
+                                width: "100%",
+                                height: "200%", // stack 2 images vertically
+                                transform:
+                                  index === 0
+                                    ? imageStyle.transform
+                                    : "translateY(0)",
+                                transition:
+                                  index === 0 ? imageStyle.transition : "none",
+                              }}
+                            >
+                              {/* Current Image (Top) */}
+                              <Box sx={{ width: "100%", height: "50%" }}>
+                                <ProfileImage
+                                  src={currentSrc}
+                                  isPrivate={isPrivate}
+                                  isPublic={isPublic}
+                                  isAvatar={isAvatar}
+                                  isPremium={membership === 1}
+                                  publicImageCount={data?.PublicImage ?? 0}
+                                  onUpgrade={() => router.push("/membership")}
+                                />
+                              </Box>
+
+                              {/* Next Image (Bottom - PRELOADED) */}
+                              <Box sx={{ width: "100%", height: "50%" }}>
+                                <ProfileImage
+                                  src={nextSrc}
+                                  isPrivate={false}
+                                  isPublic={true}
+                                  isAvatar={false}
+                                  isPremium={membership === 1}
+                                  publicImageCount={data?.PublicImage ?? 0}
+                                  onUpgrade={() => router.push("/membership")}
+                                />
+                              </Box>
+                            </Box>
                           </Box>
 
                           <ImageDots
