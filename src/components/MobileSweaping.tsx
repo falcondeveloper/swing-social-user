@@ -679,25 +679,40 @@ export default function MobileSweaping() {
       action = "maybe";
     else if (deltaY < -swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX)) {
       const { all } = getAllImages(currentProfile);
-      if (!all.length) return;
 
-      // Slide container up (reveals next image instantly)
-      setImageStyle({
-        transform: "translateY(-50%)",
-        transition: "transform 0.35s ease-out",
-      });
+      // Only handle image navigation if there are multiple images
+      if (all.length > 1) {
+        // Check if we're at the last image
+        if (imageIndex === all.length - 1) {
+          // 🚫 No swipe on last image
+          setImageStyle({
+            transform: "translateY(0)",
+            transition: "none",
+          });
+          return;
+        }
 
-      // After animation completes, reset position & update index
-      setTimeout(() => {
-        setImageIndex((prev) => (prev + 1) % all.length);
+        // Slide container up to show next image
+        setImageStyle({
+          transform: "translateY(-50%)",
+          transition: "transform 0.35s ease-out",
+        });
 
-        // Reset without visual jump
+        // After animation completes, update index
+        setTimeout(() => {
+          setImageIndex((prev) => prev + 1);
+          setImageStyle({
+            transform: "translateY(0)",
+            transition: "none",
+          });
+        }, 350);
+      } else {
+        // Single image - just reset position
         setImageStyle({
           transform: "translateY(0)",
-          transition: "none",
+          transition: "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
         });
-      }, 350);
-
+      }
       return;
     }
 
@@ -739,9 +754,8 @@ export default function MobileSweaping() {
       });
     }
   }, [
-    cardStyles,
-    isProcessingSwipe,
-    isExiting,
+    currentProfile,
+    imageIndex,
     isUserPremium,
     hasReachedSwipeLimit,
     triggerExitAnimation,
@@ -1285,21 +1299,22 @@ export default function MobileSweaping() {
                     {(() => {
                       const { publicImgs, privateImgs, all } =
                         getAllImages(profile);
-
                       const isAvatar = imageIndex === 0 && !!profile.Avatar;
-
                       const isPublic = imageIndex < publicImgs.length;
-
                       const isPrivate =
                         imageIndex >= publicImgs.length &&
                         privateImgs.length > 0;
-
                       const currentSrc =
                         all[imageIndex] ||
                         profile.Avatar ||
                         "/fallback-avatar.png";
-                      const nextIndex = (imageIndex + 1) % all.length;
-                      const nextSrc = all[nextIndex] || currentSrc;
+
+                      // Only show next image if there's more than one image and we're not at the last one
+                      const hasNextImage =
+                        all.length > 1 && imageIndex < all.length - 1;
+                      const nextSrc = hasNextImage
+                        ? all[imageIndex + 1]
+                        : currentSrc;
 
                       return (
                         <Box
@@ -1320,21 +1335,32 @@ export default function MobileSweaping() {
                               overflow: "hidden",
                             }}
                           >
-                            {/* Sliding wrapper */}
+                            {/* Sliding wrapper - only show second image if there is one */}
                             <Box
                               sx={{
                                 width: "100%",
-                                height: "200%", // stack 2 images vertically
+                                height: hasNextImage ? "200%" : "100%",
                                 transform:
-                                  index === 0
+                                  index === 0 &&
+                                  all.length > 1 &&
+                                  imageIndex < all.length - 1
                                     ? imageStyle.transform
                                     : "translateY(0)",
                                 transition:
-                                  index === 0 ? imageStyle.transition : "none",
+                                  index === 0 &&
+                                  all.length > 1 &&
+                                  imageIndex < all.length - 1
+                                    ? imageStyle.transition
+                                    : "none",
                               }}
                             >
                               {/* Current Image (Top) */}
-                              <Box sx={{ width: "100%", height: "50%" }}>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: hasNextImage ? "50%" : "100%",
+                                }}
+                              >
                                 <ProfileImage
                                   src={currentSrc}
                                   isPrivate={isPrivate}
@@ -1346,18 +1372,20 @@ export default function MobileSweaping() {
                                 />
                               </Box>
 
-                              {/* Next Image (Bottom - PRELOADED) */}
-                              <Box sx={{ width: "100%", height: "50%" }}>
-                                <ProfileImage
-                                  src={nextSrc}
-                                  isPrivate={false}
-                                  isPublic={true}
-                                  isAvatar={false}
-                                  isPremium={membership === 1}
-                                  publicImageCount={data?.PublicImage ?? 0}
-                                  onUpgrade={() => router.push("/membership")}
-                                />
-                              </Box>
+                              {/* Next Image (Bottom) - only render if there is a next image */}
+                              {hasNextImage && (
+                                <Box sx={{ width: "100%", height: "50%" }}>
+                                  <ProfileImage
+                                    src={nextSrc}
+                                    isPrivate={false}
+                                    isPublic={true}
+                                    isAvatar={false}
+                                    isPremium={membership === 1}
+                                    publicImageCount={data?.PublicImage ?? 0}
+                                    onUpgrade={() => router.push("/membership")}
+                                  />
+                                </Box>
+                              )}
                             </Box>
                           </Box>
 
@@ -1365,7 +1393,10 @@ export default function MobileSweaping() {
                             total={all.length}
                             active={imageIndex}
                             onSelect={(index) => {
-                              setImageIndex(index);
+                              // Only allow selecting valid indices
+                              if (index >= 0 && index < all.length) {
+                                setImageIndex(index);
+                              }
                             }}
                           />
 
