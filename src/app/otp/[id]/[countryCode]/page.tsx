@@ -96,7 +96,7 @@ const validationSchema = Yup.object({
     .of(
       Yup.string()
         .matches(/^[0-9]$/, "Must be a digit")
-        .required("Required")
+        .required("Required"),
     )
     .min(4, "Must be 4 digits")
     .max(4, "Must be 4 digits"),
@@ -138,11 +138,12 @@ export default function Otp({
     validationSchema,
     onSubmit: async (values) => {
       setLoading(true);
+      console.log("otpData.", otpData);
       try {
         const enteredCode = values.otp.join("");
         const res = await fetch(
           `/api/user/otp?countryCode=${countryCode}&mobileNumber=${phone}&verificationId=${otpData?.verificationId}&code=${enteredCode}`,
-          { method: "GET" }
+          { method: "GET" },
         );
 
         const data = await res.json();
@@ -183,7 +184,7 @@ export default function Otp({
 
     if (value && index < newOtp.length - 1) {
       const nextInput = document.getElementById(
-        `otp-${index + 1}`
+        `otp-${index + 1}`,
       ) as HTMLInputElement;
       nextInput?.focus();
     }
@@ -191,11 +192,11 @@ export default function Otp({
 
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
-    index: number
+    index: number,
   ) => {
     if (event.key === "Backspace" && !formik.values.otp[index] && index > 0) {
       const prevInput = document.getElementById(
-        `otp-${index - 1}`
+        `otp-${index - 1}`,
       ) as HTMLInputElement;
       prevInput?.focus();
     }
@@ -212,6 +213,7 @@ export default function Otp({
       const data = await res.json();
       setResendTimer(90);
       setOtpData(data?.data);
+      console.log(data?.data);
     } catch (error) {
       console.error("Error:", error);
     }
