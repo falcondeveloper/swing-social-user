@@ -58,9 +58,9 @@ async function sendErrorEmail(errorMessage: string, meta?: ErrorMeta) {
     // const recipients = ["baldhavansh2505@gmail.com"];
 
     const recipients = [
-  "falconsoftmobile@gmail.com",
+  // "falconsoftmobile@gmail.com",
   "baldhavansh2505@gmail.com",
-  "latuttle22@gmail.com",
+  // "latuttle22@gmail.com",
 ];
 
     const formattedText = `
