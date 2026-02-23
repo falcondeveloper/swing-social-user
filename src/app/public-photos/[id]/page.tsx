@@ -28,6 +28,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useRouter } from "next/navigation";
 import Carousel from "@/commonPage/Carousel";
 import Cropper from "react-easy-crop";
+import Fade from "@mui/material/Fade";
 
 type Params = Promise<{ id: string }>;
 
@@ -54,7 +55,7 @@ const ParticleField = memo(() => {
         duration: Math.random() * (isMobile ? 15 : 20) + 10,
         delay: -Math.random() * 20,
       })),
-    [isMobile]
+    [isMobile],
   );
 
   return (
@@ -93,13 +94,14 @@ const page = ({ params }: { params: Params }) => {
   const router = useRouter();
   const [userId, setUserId] = useState<string>("");
 
-  const [cropModalOpen, setCropModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [openCropper, setOpenCropper] = useState(false);
+  const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   useEffect(() => {
@@ -112,58 +114,54 @@ const page = ({ params }: { params: Params }) => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [previews, setPreviews] = useState<(string | null)[]>(
-    Array.from({ length: MAX_PHOTOS }, () => null)
+    Array.from({ length: MAX_PHOTOS }, () => null),
   );
+
   const [files, setFiles] = useState<(File | null)[]>(
-    Array.from({ length: MAX_PHOTOS }, () => null)
+    Array.from({ length: MAX_PHOTOS }, () => null),
   );
   const [dragOver, setDragOver] = useState(false);
 
-  const getCroppedImg = (
-    imageSrc: string,
-    crop: any,
-    rotation = 0
-  ): Promise<File> => {
+  const getCroppedImg = (imageSrc: string, crop: any): Promise<File> => {
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.src = imageSrc;
+
       image.onload = () => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
+        if (!ctx) return reject("Canvas error");
 
-        if (!ctx) return reject(new Error("Canvas context not found"));
+        // 🔥 4:5 final output size
+        const TARGET_WIDTH = 800;
+        const TARGET_HEIGHT = 1000;
 
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
-
-        canvas.width = crop.width;
-        canvas.height = crop.height;
+        canvas.width = TARGET_WIDTH;
+        canvas.height = TARGET_HEIGHT;
 
         ctx.drawImage(
           image,
-          crop.x * scaleX,
-          crop.y * scaleY,
-          crop.width * scaleX,
-          crop.height * scaleY,
-          0,
-          0,
+          crop.x,
+          crop.y,
           crop.width,
-          crop.height
+          crop.height,
+          0,
+          0,
+          TARGET_WIDTH,
+          TARGET_HEIGHT,
         );
 
         canvas.toBlob(
           (blob) => {
-            if (!blob) return reject(new Error("Canvas is empty"));
-            const file = new File([blob], "cropped.jpeg", {
-              type: "image/jpeg",
-            });
-            resolve(file);
+            if (!blob) return reject("Blob error");
+            resolve(new File([blob], "cropped.jpg", { type: "image/jpeg" }));
           },
           "image/jpeg",
-          0.9
+          0.92,
         );
       };
-      image.onerror = (err) => reject(err);
+
+      image.onerror = reject;
     });
   };
 
@@ -273,37 +271,116 @@ const page = ({ params }: { params: Params }) => {
     setFiles(newFiles);
     formik.setFieldValue(
       "photos",
-      newFiles.filter((x): x is File => !!x)
+      newFiles.filter((x): x is File => !!x),
     );
   };
 
   const onTilePick = (i: number) => inputRefs.current[i]?.click();
 
-  const onTileChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const onTileChange = async (
+    i: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const fl = e.target.files ? Array.from(e.target.files) : [];
     if (!fl.length) return;
 
-    setSelectedFile(fl[0]);
+    const file = fl[0];
+
+    const optimizedFile = await downscaleImage(file);
+
+    const objectUrl = URL.createObjectURL(optimizedFile);
+
+    setAvatarImage(objectUrl);
     setSelectedIndex(i);
-    setCropModalOpen(true);
+    setOpenCropper(true);
 
     e.target.value = "";
   };
 
-  const handleCropDone = async () => {
-    if (!selectedFile || !croppedAreaPixels || selectedIndex === null) return;
-    const previewUrl = URL.createObjectURL(selectedFile);
+  const onCropComplete = (_: any, area: any) => {
+    setCroppedAreaPixels(area);
+  };
 
-    try {
-      const croppedFile = await getCroppedImg(previewUrl, croppedAreaPixels);
-      validateAndUseFiles([croppedFile], selectedIndex);
-    } catch (e) {
-      console.error("Crop failed", e);
-    } finally {
-      setCropModalOpen(false);
-      setSelectedFile(null);
-      setSelectedIndex(null);
-    }
+  const handleCropConfirm = async () => {
+    if (!avatarImage || !croppedAreaPixels || selectedIndex === null) return;
+
+    const image = new Image();
+    image.src = avatarImage;
+
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      // 🔥 4:5 swipe output size
+      const TARGET_WIDTH = 800;
+      const TARGET_HEIGHT = 1000;
+
+      canvas.width = TARGET_WIDTH;
+      canvas.height = TARGET_HEIGHT;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      ctx.drawImage(
+        image,
+        croppedAreaPixels.x,
+        croppedAreaPixels.y,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height,
+        0,
+        0,
+        TARGET_WIDTH,
+        TARGET_HEIGHT,
+      );
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+
+          const croppedFile = new File([blob], "cropped.jpg", {
+            type: "image/jpeg",
+          });
+
+          validateAndUseFiles([croppedFile], selectedIndex);
+
+          URL.revokeObjectURL(avatarImage);
+          setAvatarImage(null);
+          setSelectedIndex(null);
+          setOpenCropper(false);
+          setCrop({ x: 0, y: 0 });
+          setZoom(1);
+        },
+        "image/jpeg",
+        0.92,
+      );
+    };
+  };
+
+  const downscaleImage = async (file: File): Promise<File> => {
+    const img = await createImageBitmap(file);
+
+    const MAX_WIDTH = 1200;
+    const scale = Math.min(1, MAX_WIDTH / img.width);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          resolve(new File([blob!], file.name, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.95,
+      );
+    });
   };
 
   const onRemove = (i: number) => {
@@ -316,7 +393,7 @@ const page = ({ params }: { params: Params }) => {
     setFiles(newFiles);
     formik.setFieldValue(
       "photos",
-      newFiles.filter((x): x is File => !!x)
+      newFiles.filter((x): x is File => !!x),
     );
   };
 
@@ -340,14 +417,13 @@ const page = ({ params }: { params: Params }) => {
     return (
       <Box
         role="button"
-        aria-label={hasPhoto ? `Photo slot ${i + 1}` : `Add photo ${i + 1}`}
         onClick={() => onTilePick(i)}
         sx={{
           width: "100%",
-          aspectRatio: "1 / 1",
+          aspectRatio: "4 / 5", // 🔥 MATCH CROP RATIO
           border: "2px dashed rgba(255,255,255,0.7)",
           borderRadius: 3,
-          backgroundColor: "#1d1d1d",
+          backgroundColor: "#000",
           position: "relative",
           overflow: "hidden",
           display: "grid",
@@ -388,6 +464,7 @@ const page = ({ params }: { params: Params }) => {
                 objectFit: "cover",
               }}
             />
+
             <Box
               sx={{
                 position: "absolute",
@@ -631,50 +708,38 @@ const page = ({ params }: { params: Params }) => {
       </Box>
 
       <Dialog
-        open={cropModalOpen}
-        onClose={() => setCropModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: "#121212",
-            color: "#fff",
-            borderRadius: 3,
-            overflow: "hidden",
-          },
+        open={openCropper}
+        onClose={() => {
+          if (avatarImage) URL.revokeObjectURL(avatarImage);
+          setOpenCropper(false);
+          setCrop({ x: 0, y: 0 });
+          setZoom(1);
         }}
+        TransitionComponent={Fade}
       >
         <DialogContent
-          sx={{ position: "relative", height: 400, bgcolor: "#000" }}
+          sx={{
+            backgroundColor: "#000",
+            color: "#fff",
+            width: { xs: "300px", sm: "400px" },
+            height: { xs: "375px", sm: "500px" }, // 🔥 4:5 ratio
+            position: "relative",
+            padding: 0,
+          }}
         >
-          {selectedFile && (
-            <Cropper
-              image={URL.createObjectURL(selectedFile)}
-              crop={crop}
-              zoom={zoom}
-              aspect={1}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={(_, croppedAreaPixels) =>
-                setCroppedAreaPixels(croppedAreaPixels)
-              }
-              cropShape="rect"
-              showGrid={false}
-            />
-          )}
-        </DialogContent>
-
-        <Box sx={{ px: 3, py: 1 }}>
-          <Typography gutterBottom>Zoom</Typography>
-          <Slider
-            value={zoom}
-            min={1}
-            max={3}
-            step={0.1}
-            onChange={(_, v) => setZoom(v as number)}
-            sx={{ color: "#FF2D55" }}
+          <Cropper
+            key={avatarImage}
+            image={avatarImage || undefined}
+            crop={crop}
+            zoom={zoom}
+            aspect={4 / 5}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            zoomSpeed={0.1}
+            restrictPosition={false}
           />
-        </Box>
+        </DialogContent>
 
         <DialogActions
           sx={{
@@ -685,7 +750,7 @@ const page = ({ params }: { params: Params }) => {
         >
           <Button
             variant="contained"
-            onClick={handleCropDone}
+            onClick={handleCropConfirm}
             sx={{
               backgroundColor: "#c2185b",
               "&:hover": { backgroundColor: "#ad1457" },

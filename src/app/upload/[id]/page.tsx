@@ -158,7 +158,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
         setZoom(1);
         setCroppedArea(null);
 
-        setAvatarImage(null); // 🔥 important reset
+        setAvatarImage(null);
 
         setTimeout(() => {
           setAvatarImage(imageData);
