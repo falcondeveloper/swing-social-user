@@ -1,6 +1,57 @@
-import { NextResponse } from 'next/server';
-import { Client } from 'basic-ftp';
-import { Readable } from 'stream';
+// import { NextResponse } from 'next/server';
+// import { Client } from 'basic-ftp';
+// import { Readable } from 'stream';
+
+// function toReadable(buffer: Buffer) {
+//   return new Readable({
+//     read() {
+//       this.push(buffer);
+//       this.push(null);
+//     },
+//   });
+// }
+
+// export async function POST(req: Request) {
+//   try {
+//     const formData = await req.formData();
+//     const file = formData.get('image');
+
+//     if (!file || !(file instanceof Blob)) {
+//       return NextResponse.json({ message: 'Invalid file' }, { status: 400 });
+//     }
+
+//     const buffer = Buffer.from(await (file as Blob).arrayBuffer());
+//     const filename = `${Date.now()}.jpg`;
+
+//     const client = new Client();
+//     client.ftp.verbose = true;
+
+//     await client.access({
+//       host: '198.12.235.186',
+//       user: 'clarktrue@truecontractingsolutions.app',
+//       password: 'Bmw635csi#Bmw635csi#',
+//       port: 21,
+//       secure: false
+//     });
+
+//     const remoteDir = '/';
+//     await client.ensureDir(remoteDir);
+//     await client.uploadFrom(toReadable(buffer), `/${filename}`);
+//     client.close();
+
+//     const imageUrl = `https://truecontractingsolutions.app/images/${filename}`;
+
+//     return NextResponse.json({ imageUrl, blobUrl: imageUrl, message: 'Upload success' });
+//   } catch (error) {
+//     console.error('FTP Upload error:', error);
+//     return NextResponse.json({ message: 'Image upload via FTP failed', error }, { status: 500 });
+//   }
+// }
+
+import { NextResponse } from "next/server";
+import { Client } from "basic-ftp";
+import { Readable } from "stream";
+import sharp from "sharp";
 
 function toReadable(buffer: Buffer) {
   return new Readable({
@@ -14,36 +65,67 @@ function toReadable(buffer: Buffer) {
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-    const file = formData.get('image');
+    const file = formData.get("image");
 
     if (!file || !(file instanceof Blob)) {
-      return NextResponse.json({ message: 'Invalid file' }, { status: 400 });
+      return NextResponse.json({ message: "Invalid file" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await (file as Blob).arrayBuffer());
-    const filename = `${Date.now()}.jpg`;
+    const originalBuffer = Buffer.from(await file.arrayBuffer());
+
+    // 🚀 Sharp Optimization
+    let quality = 80;
+    let optimizedBuffer = await sharp(originalBuffer)
+      .rotate() // auto orientation fix
+      .resize({
+        width: 1200,
+        withoutEnlargement: true,
+      })
+      .webp({ quality })
+      .toBuffer();
+
+    // 🔥 Auto compress under 300KB
+    while (optimizedBuffer.length > 300 * 1024 && quality > 40) {
+      quality -= 5;
+      optimizedBuffer = await sharp(originalBuffer)
+        .rotate()
+        .resize({
+          width: 1200,
+          withoutEnlargement: true,
+        })
+        .webp({ quality })
+        .toBuffer();
+    }
+
+    const filename = `${Date.now()}.webp`;
 
     const client = new Client();
-    client.ftp.verbose = true;
 
     await client.access({
-      host: '198.12.235.186',
-      user: 'clarktrue@truecontractingsolutions.app',
-      password: 'Bmw635csi#Bmw635csi#',
+      host: "198.12.235.186",
+      user: "clarktrue@truecontractingsolutions.app",
+      password: "Bmw635csi#Bmw635csi#",
       port: 21,
-      secure: false
+      secure: false,
     });
 
-    const remoteDir = '/';
-    await client.ensureDir(remoteDir);
-    await client.uploadFrom(toReadable(buffer), `/${filename}`);
+    await client.uploadFrom(toReadable(optimizedBuffer), `/${filename}`);
+
     client.close();
 
     const imageUrl = `https://truecontractingsolutions.app/images/${filename}`;
 
-    return NextResponse.json({ imageUrl, blobUrl: imageUrl, message: 'Upload success' });
+    return NextResponse.json({
+      imageUrl,
+      blobUrl: imageUrl,
+      sizeKB: Math.round(optimizedBuffer.length / 1024),
+      message: "Upload success",
+    });
   } catch (error) {
-    console.error('FTP Upload error:', error);
-    return NextResponse.json({ message: 'Image upload via FTP failed', error }, { status: 500 });
+    console.error("FTP Upload error:", error);
+    return NextResponse.json(
+      { message: "Image upload failed", error },
+      { status: 500 },
+    );
   }
 }

@@ -161,23 +161,23 @@ export default function UploadAvatar({ params }: { params: Params }) {
     }
   };
 
-  const handleCropConfirm = () => {
+  const handleCropConfirm = async () => {
     if (!croppedArea || !avatarImage) return;
 
     const image = new Image();
     image.src = avatarImage;
 
-    image.onload = () => {
-      const work = document.createElement("canvas");
+    image.onload = async () => {
       const scaleX = image.naturalWidth / image.width;
       const scaleY = image.naturalHeight / image.height;
 
       const { x, y, width, height } = croppedArea;
 
-      work.width = Math.round(width * scaleX);
-      work.height = Math.round(height * scaleY);
+      const workCanvas = document.createElement("canvas");
+      workCanvas.width = width * scaleX;
+      workCanvas.height = height * scaleY;
 
-      const wctx = work.getContext("2d");
+      const wctx = workCanvas.getContext("2d");
       if (!wctx) return;
 
       wctx.drawImage(
@@ -188,37 +188,47 @@ export default function UploadAvatar({ params }: { params: Params }) {
         height * scaleY,
         0,
         0,
-        work.width,
-        work.height,
+        workCanvas.width,
+        workCanvas.height,
       );
 
-      const MAX_SIDE = 768;
-      const maxDim = Math.max(work.width, work.height);
-      const scale = maxDim > MAX_SIDE ? MAX_SIDE / maxDim : 1;
+      // Resize to mobile swipe ratio 4:5
+      const TARGET_WIDTH = 800;
+      const TARGET_HEIGHT = 1000;
 
-      const out = document.createElement("canvas");
-      out.width = Math.round(work.width * scale);
-      out.height = Math.round(work.height * scale);
+      const outCanvas = document.createElement("canvas");
+      outCanvas.width = TARGET_WIDTH;
+      outCanvas.height = TARGET_HEIGHT;
 
-      const octx = out.getContext("2d");
+      const octx = outCanvas.getContext("2d");
       if (!octx) return;
 
       octx.imageSmoothingEnabled = true;
       octx.imageSmoothingQuality = "high";
-      octx.drawImage(work, 0, 0, out.width, out.height);
 
-      const JPEG_QUALITY = 0.85;
-      const dataUrl = out.toDataURL("image/jpeg", JPEG_QUALITY);
+      octx.drawImage(workCanvas, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
 
-      setCroppedAvatar(dataUrl);
-      const avatarbase = dataUrl.split(",")[1];
-      setAvatarBase64(avatarbase);
-      console.log(
-        "Generated JPEG avatar base64 (first 100 chars):",
-        avatarbase.substring(0, 100),
+      // 🔥 Convert to WEBP using toBlob (better than toDataURL)
+      outCanvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const webpDataUrl = reader.result as string;
+
+            console.log("Converted format:", webpDataUrl.substring(0, 30));
+
+            setCroppedAvatar(webpDataUrl);
+            formik.setFieldValue("avatar", webpDataUrl);
+            setOpenCropper(false);
+          };
+
+          reader.readAsDataURL(blob);
+        },
+        "image/webp",
+        0.85,
       );
-      formik.setFieldValue("avatar", dataUrl);
-      setOpenCropper(false);
     };
   };
 
@@ -252,7 +262,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
   const uploadImage = async (dataUrl: string): Promise<string> => {
     const blob = await (await fetch(dataUrl)).blob();
     const formData = new FormData();
-    formData.append("image", blob, `${Date.now()}.jpg`);
+    formData.append("image", blob, `${Date.now()}.webp`);
 
     const res = await fetch("/api/user/upload", {
       method: "POST",
@@ -326,7 +336,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
     ctx.drawImage(img, 0, 0);
 
     return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob!), "image/jpeg", 0.92);
+      canvas.toBlob((blob) => resolve(blob!), "image/webp", 0.9);
     });
   }
 
@@ -346,7 +356,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
     await fetch(uploadUrl, {
       method: "PUT",
       headers: {
-        "Content-Type": file.type || "image/jpeg",
+        "Content-Type": "image/webp",
       },
       body: normalizedBlob,
     });
@@ -413,13 +423,6 @@ export default function UploadAvatar({ params }: { params: Params }) {
       setSelfieStatus("idle");
     }
   };
-
-  const handleTakeSelfie = useCallback(() => {
-    const input = document.getElementById("selfie-upload") as HTMLInputElement;
-    if (input) {
-      input.click();
-    }
-  }, []);
 
   const handleSkipSelfie = () => {
     localStorage.setItem("selfieSkipped", "true");
@@ -1233,7 +1236,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                     image={avatarImage || undefined}
                     crop={crop}
                     zoom={zoom}
-                    aspect={1}
+                    aspect={4 / 5}
                     onCropChange={setCrop}
                     onZoomChange={setZoom}
                     onCropComplete={onCropComplete}
