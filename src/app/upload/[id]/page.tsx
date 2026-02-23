@@ -257,11 +257,6 @@ export default function UploadAvatar({ params }: { params: Params }) {
         }, 50);
       };
 
-      img.onerror = (error) => {
-        console.error("Image load failed:", error);
-        alert("Failed to load image. Please try a different image.");
-      };
-
       img.src = imageData;
     };
 
