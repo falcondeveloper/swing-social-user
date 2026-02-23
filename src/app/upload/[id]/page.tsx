@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -32,6 +32,7 @@ import Carousel from "@/commonPage/Carousel";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import Fade from "@mui/material/Fade";
 
 type Params = Promise<{ id: string }>;
 
@@ -125,16 +126,13 @@ export default function UploadAvatar({ params }: { params: Params }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSelfieUploading, setIsSelfieUploading] = useState(false);
   const [step, setStep] = useState<StepType>("intro");
-  const [preview, setPreview] = useState<string | null>(null);
-  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selfieStatus, setSelfieStatus] = useState<SelfieStatus>("idle");
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<DialogType>("success");
   const [dialogMessage, setDialogMessage] = useState("");
+  const [isCropAnimating, setIsCropAnimating] = useState(false);
 
   const openDialog = (type: DialogType, message: string) => {
     setDialogType(type);
@@ -154,8 +152,18 @@ export default function UploadAvatar({ params }: { params: Params }) {
     if (file) {
       const reader = new FileReader();
       reader.onload = () => {
-        setAvatarImage(reader.result as string);
-        setOpenCropper(true);
+        const imageData = reader.result as string;
+
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedArea(null);
+
+        setAvatarImage(null); // 🔥 important reset
+
+        setTimeout(() => {
+          setAvatarImage(imageData);
+          setOpenCropper(true);
+        }, 50);
       };
       reader.readAsDataURL(file);
     }
@@ -180,6 +188,9 @@ export default function UploadAvatar({ params }: { params: Params }) {
       const wctx = workCanvas.getContext("2d");
       if (!wctx) return;
 
+      wctx.imageSmoothingEnabled = true;
+      wctx.imageSmoothingQuality = "high";
+
       wctx.drawImage(
         image,
         x * scaleX,
@@ -192,9 +203,8 @@ export default function UploadAvatar({ params }: { params: Params }) {
         workCanvas.height,
       );
 
-      // Resize to mobile swipe ratio 4:5
-      const TARGET_WIDTH = 800;
-      const TARGET_HEIGHT = 1000;
+      const TARGET_WIDTH = 1200; 
+      const TARGET_HEIGHT = 1500;
 
       const outCanvas = document.createElement("canvas");
       outCanvas.width = TARGET_WIDTH;
@@ -208,7 +218,6 @@ export default function UploadAvatar({ params }: { params: Params }) {
 
       octx.drawImage(workCanvas, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
 
-      // 🔥 Convert to WEBP using toBlob (better than toDataURL)
       outCanvas.toBlob(
         (blob) => {
           if (!blob) return;
@@ -217,17 +226,23 @@ export default function UploadAvatar({ params }: { params: Params }) {
           reader.onloadend = () => {
             const webpDataUrl = reader.result as string;
 
-            console.log("Converted format:", webpDataUrl.substring(0, 30));
+            setIsCropAnimating(true);
 
-            setCroppedAvatar(webpDataUrl);
-            formik.setFieldValue("avatar", webpDataUrl);
-            setOpenCropper(false);
+            setTimeout(() => {
+              setCroppedAvatar(webpDataUrl);
+              formik.setFieldValue("avatar", webpDataUrl);
+              setOpenCropper(false);
+
+              setTimeout(() => {
+                setIsCropAnimating(false);
+              }, 300);
+            }, 150);
           };
 
           reader.readAsDataURL(blob);
         },
         "image/webp",
-        0.85,
+        0.95,
       );
     };
   };
@@ -638,7 +653,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                         <Box
                           sx={{
                             width: 200,
-                            height: 200,
+                            aspectRatio: "4 / 5",
                             border: "2px dashed #fff",
                             borderRadius: 4,
                             backgroundColor: "#1d1d1d",
@@ -660,17 +675,24 @@ export default function UploadAvatar({ params }: { params: Params }) {
                           <label htmlFor="upload-avatar">
                             {croppedAvatar ? (
                               <>
-                                <img
+                                <Box
+                                  component="img"
                                   src={croppedAvatar}
                                   alt="Cropped Avatar"
-                                  style={{
+                                  sx={{
                                     width: "100%",
                                     height: "100%",
                                     objectFit: "cover",
-                                    borderRadius: "16px",
                                     display: "block",
+                                    transition:
+                                      "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                                    transform: isCropAnimating
+                                      ? "scale(0.92)"
+                                      : "scale(1)",
+                                    opacity: isCropAnimating ? 0 : 1,
                                   }}
                                 />
+
                                 <IconButton
                                   component="span"
                                   sx={{
@@ -974,7 +996,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                       <Box
                         sx={{
                           width: 200,
-                          height: 200,
+                          aspectRatio: "4 / 5",
                           mx: "auto",
                           borderRadius: "10px",
                           overflow: "hidden",
@@ -1221,7 +1243,15 @@ export default function UploadAvatar({ params }: { params: Params }) {
 
               <Carousel title="Exciting Events and Real Connections Start Here!" />
 
-              <Dialog open={openCropper} onClose={() => setOpenCropper(false)}>
+              <Dialog
+                open={openCropper}
+                onClose={() => {
+                  setOpenCropper(false);
+                  setCrop({ x: 0, y: 0 });
+                  setZoom(1);
+                }}
+                TransitionComponent={Fade}
+              >
                 <DialogContent
                   sx={{
                     backgroundColor: "#000",
@@ -1233,6 +1263,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                   }}
                 >
                   <Cropper
+                    key={avatarImage}
                     image={avatarImage || undefined}
                     crop={crop}
                     zoom={zoom}
