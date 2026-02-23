@@ -203,7 +203,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
         workCanvas.height,
       );
 
-      const TARGET_WIDTH = 1000; // Optimal for profile pics while keeping file size small
+      const TARGET_WIDTH = 1000;
       const TARGET_HEIGHT = 1250;
 
       const outCanvas = document.createElement("canvas");
@@ -227,7 +227,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
 
           setTimeout(() => {
             setCroppedAvatar(blobUrl);
-            formik.setFieldValue("avatar", blob); // Store the Blob directly
+            formik.setFieldValue("avatar", blob);
             setOpenCropper(false);
 
             setTimeout(() => {
@@ -236,7 +236,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
           }, 150);
         },
         "image/webp",
-        0.8, // 0.8 is the sweet spot for compression speed vs quality
+        0.8,
       );
     };
   };
@@ -271,7 +271,6 @@ export default function UploadAvatar({ params }: { params: Params }) {
   const uploadImage = async (data: string | Blob): Promise<string> => {
     let blob: Blob;
     if (typeof data === "string") {
-      // Fallback for when we only have a data URL
       blob = await (await fetch(data)).blob();
     } else {
       blob = data;
