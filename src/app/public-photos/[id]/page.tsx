@@ -420,10 +420,10 @@ const page = ({ params }: { params: Params }) => {
         onClick={() => onTilePick(i)}
         sx={{
           width: "100%",
-          aspectRatio: "4 / 5", // 🔥 MATCH CROP RATIO
+          aspectRatio: "4 / 5",
           border: "2px dashed rgba(255,255,255,0.7)",
+          backgroundColor: "#1d1d1d",
           borderRadius: 3,
-          backgroundColor: "#000",
           position: "relative",
           overflow: "hidden",
           display: "grid",

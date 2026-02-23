@@ -341,7 +341,7 @@ const page = ({ params }: { params: Params }) => {
           aspectRatio: "4 / 5", // 🔥 MATCH CROP
           border: "2px dashed rgba(255,255,255,0.7)",
           borderRadius: 3,
-          backgroundColor: "#000",
+          backgroundColor: "#1d1d1d",
           position: "relative",
           overflow: "hidden",
           display: "grid",

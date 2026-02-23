@@ -222,46 +222,97 @@ export default function UploadAvatar({ params }: { params: Params }) {
     })();
   }, [params]);
 
+  // FIXED: Image Cropping Logic with Proper Loading
+  // Replace your onFileChange and handleCropConfirm functions with these:
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const imageData = reader.result as string;
+    if (!file) return;
 
-        setCrop({ x: 0, y: 0 });
-        setZoom(1);
-        setCroppedArea(null);
+    const reader = new FileReader();
 
-        setAvatarImage(null);
+    reader.onload = () => {
+      const imageData = reader.result as string;
 
+      // ✅ FIX: Reset states FIRST
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedArea(null);
+      setAvatarImage(null);
+      setOpenCropper(false);
+
+      // ✅ FIX: Preload image before opening cropper
+      const img = new Image();
+      img.onload = () => {
+        console.log("Image loaded successfully:", img.width, "x", img.height);
+
+        // Wait for next tick to ensure clean state
         setTimeout(() => {
           setAvatarImage(imageData);
-          setOpenCropper(true);
+
+          // Wait another tick before opening cropper
+          setTimeout(() => {
+            setOpenCropper(true);
+          }, 100);
         }, 50);
       };
-      reader.readAsDataURL(file);
-    }
+
+      img.onerror = (error) => {
+        console.error("Image load failed:", error);
+        alert("Failed to load image. Please try a different image.");
+      };
+
+      img.src = imageData;
+    };
+
+    reader.onerror = (error) => {
+      console.error("FileReader error:", error);
+      alert("Failed to read file. Please try again.");
+    };
+
+    reader.readAsDataURL(file);
   };
 
+  // ✅ IMPROVED: handleCropConfirm with better error handling
   const handleCropConfirm = async () => {
-    if (!croppedArea || !avatarImage) return;
+    if (!croppedArea || !avatarImage) {
+      console.error("Missing crop data:", {
+        croppedArea,
+        hasImage: !!avatarImage,
+      });
+      alert("Please select an area to crop");
+      return;
+    }
 
-    const image = new Image();
-    image.src = avatarImage;
+    try {
+      const image = new Image();
 
-    image.onload = async () => {
+      // ✅ FIX: Use promise-based image loading
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () =>
+          reject(new Error("Failed to load image for cropping"));
+        image.src = avatarImage;
+      });
+
       const scaleX = image.naturalWidth / image.width;
       const scaleY = image.naturalHeight / image.height;
 
       const { x, y, width, height } = croppedArea;
+
+      // ✅ FIX: Validate crop dimensions
+      if (width <= 0 || height <= 0) {
+        throw new Error("Invalid crop dimensions");
+      }
 
       const workCanvas = document.createElement("canvas");
       workCanvas.width = width * scaleX;
       workCanvas.height = height * scaleY;
 
       const wctx = workCanvas.getContext("2d");
-      if (!wctx) return;
+      if (!wctx) {
+        throw new Error("Failed to get canvas context");
+      }
 
       wctx.imageSmoothingEnabled = true;
       wctx.imageSmoothingQuality = "high";
@@ -286,40 +337,55 @@ export default function UploadAvatar({ params }: { params: Params }) {
       outCanvas.height = TARGET_HEIGHT;
 
       const octx = outCanvas.getContext("2d");
-      if (!octx) return;
+      if (!octx) {
+        throw new Error("Failed to get output canvas context");
+      }
 
       octx.imageSmoothingEnabled = true;
       octx.imageSmoothingQuality = "high";
 
       octx.drawImage(workCanvas, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
 
-      outCanvas.toBlob(
-        (blob) => {
-          if (!blob) return;
+      // ✅ FIX: Use promise-based blob conversion
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        outCanvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Failed to create image blob"));
+            }
+          },
+          "image/webp",
+          0.95,
+        );
+      });
 
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const webpDataUrl = reader.result as string;
+      // ✅ FIX: Convert blob to data URL
+      const webpDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read blob"));
+        reader.readAsDataURL(blob);
+      });
 
-            setIsCropAnimating(true);
+      // Animate and update state
+      setIsCropAnimating(true);
 
-            setTimeout(() => {
-              setCroppedAvatar(webpDataUrl);
-              formik.setFieldValue("avatar", webpDataUrl);
-              setOpenCropper(false);
+      setTimeout(() => {
+        setCroppedAvatar(webpDataUrl);
+        formik.setFieldValue("avatar", webpDataUrl);
+        setOpenCropper(false);
 
-              setTimeout(() => {
-                setIsCropAnimating(false);
-              }, 300);
-            }, 150);
-          };
-
-          reader.readAsDataURL(blob);
-        },
-        "image/webp",
-        0.95,
-      );
-    };
+        setTimeout(() => {
+          setIsCropAnimating(false);
+        }, 300);
+      }, 150);
+    } catch (error) {
+      console.error("Crop error:", error);
+      alert("Failed to crop image. Please try again.");
+      setOpenCropper(false);
+    }
   };
 
   const onCropComplete = (_: any, croppedAreaPixels: any) => {
@@ -566,7 +632,6 @@ export default function UploadAvatar({ params }: { params: Params }) {
             </Typography>
           </Box>
         )}
-
         <Box
           sx={{
             display: "flex",
@@ -1325,60 +1390,107 @@ export default function UploadAvatar({ params }: { params: Params }) {
               )}
 
               <Carousel title="Exciting Events and Real Connections Start Here!" />
-
-              <Dialog
-                open={openCropper}
-                onClose={() => {
-                  setOpenCropper(false);
-                  setCrop({ x: 0, y: 0 });
-                  setZoom(1);
-                }}
-                TransitionComponent={Fade}
-              >
-                <DialogContent
-                  sx={{
-                    backgroundColor: "#000",
-                    color: "#fff",
-                    width: { xs: "300px", sm: "400px" },
-                    height: { xs: "300px", sm: "400px" },
-                    position: "relative",
-                    padding: 0,
-                  }}
-                >
-                  <Cropper
-                    key={avatarImage}
-                    image={avatarImage || undefined}
-                    crop={crop}
-                    zoom={zoom}
-                    aspect={4 / 5}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
-                    onCropComplete={onCropComplete}
-                  />
-                </DialogContent>
-                <DialogActions
-                  sx={{
-                    backgroundColor: "#121212",
-                    justifyContent: "center",
-                    p: 2,
-                  }}
-                >
-                  <Button
-                    variant="contained"
-                    onClick={handleCropConfirm}
-                    sx={{
-                      backgroundColor: "#c2185b",
-                      "&:hover": { backgroundColor: "#ad1457" },
-                    }}
-                  >
-                    Crop
-                  </Button>
-                </DialogActions>
-              </Dialog>
             </Paper>
           </Container>
         </Box>
-
+        // IMPROVED: Cropper Dialog with Loading State // Replace your existing
+        Dialog component with this improved version:
+        <Dialog
+          open={openCropper}
+          onClose={() => {
+            setOpenCropper(false);
+            setCrop({ x: 0, y: 0 });
+            setZoom(1);
+          }}
+          TransitionComponent={Fade}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogContent
+            sx={{
+              backgroundColor: "#000",
+              color: "#fff",
+              width: { xs: "90vw", sm: "400px" },
+              height: { xs: "90vw", sm: "400px" },
+              maxWidth: "500px",
+              maxHeight: "500px",
+              position: "relative",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {/* ✅ FIX: Show loading state if image isn't ready */}
+            {!avatarImage ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <CircularProgress sx={{ color: "#c2185b" }} />
+                <Typography sx={{ color: "#fff" }}>Loading image...</Typography>
+              </Box>
+            ) : (
+              <Cropper
+                key={avatarImage} // Force remount on image change
+                image={avatarImage}
+                crop={crop}
+                zoom={zoom}
+                aspect={4 / 5}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                style={{
+                  containerStyle: {
+                    backgroundColor: "#000",
+                  },
+                }}
+              />
+            )}
+          </DialogContent>
+          <DialogActions
+            sx={{
+              backgroundColor: "#121212",
+              justifyContent: "space-between",
+              p: 2,
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setOpenCropper(false);
+                setAvatarImage(null);
+              }}
+              sx={{
+                borderColor: "rgba(255,255,255,0.3)",
+                color: "#fff",
+                "&:hover": {
+                  borderColor: "#fff",
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleCropConfirm}
+              disabled={!avatarImage || !croppedArea}
+              sx={{
+                backgroundColor: "#c2185b",
+                "&:hover": { backgroundColor: "#ad1457" },
+                "&:disabled": {
+                  backgroundColor: "rgba(194, 24, 91, 0.3)",
+                },
+              }}
+            >
+              Crop & Save
+            </Button>
+          </DialogActions>
+        </Dialog>
         <Dialog
           open={dialogOpen}
           fullWidth
