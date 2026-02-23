@@ -114,6 +114,81 @@ const ParticleField = memo(() => {
   );
 });
 
+async function preprocessImageForUpload(dataUrl: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const canvas = document.createElement("canvas");
+
+    img.onload = () => {
+      // Target dimensions (same as server-side)
+      const MAX_WIDTH = 1200;
+      const MAX_HEIGHT = 1500;
+      const TARGET_SIZE_KB = 500;
+
+      let width = img.width;
+      let height = img.height;
+
+      // Calculate aspect ratio resize
+      if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+        const widthRatio = MAX_WIDTH / width;
+        const heightRatio = MAX_HEIGHT / height;
+        const ratio = Math.min(widthRatio, heightRatio);
+
+        width = Math.floor(width * ratio);
+        height = Math.floor(height * ratio);
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // High-quality rendering
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) {
+        reject(new Error("Canvas context not available"));
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Try progressively lower quality until under target size
+      let quality = 0.92;
+
+      const tryCompress = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Blob creation failed"));
+              return;
+            }
+
+            const sizeKB = blob.size / 1024;
+
+            // If too large and quality can be reduced, try again
+            if (sizeKB > TARGET_SIZE_KB && quality > 0.7) {
+              quality -= 0.05;
+              tryCompress();
+            } else {
+              console.log(
+                `Client-side compressed to ${Math.round(sizeKB)}KB at quality ${Math.round(quality * 100)}%`,
+              );
+              resolve(blob);
+            }
+          },
+          "image/webp",
+          quality,
+        );
+      };
+
+      tryCompress();
+    };
+
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = dataUrl;
+  });
+}
+
 export default function UploadAvatar({ params }: { params: Params }) {
   const router = useRouter();
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
@@ -203,7 +278,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
         workCanvas.height,
       );
 
-      const TARGET_WIDTH = 1200; 
+      const TARGET_WIDTH = 1200;
       const TARGET_HEIGHT = 1500;
 
       const outCanvas = document.createElement("canvas");
@@ -275,25 +350,33 @@ export default function UploadAvatar({ params }: { params: Params }) {
   }
 
   const uploadImage = async (dataUrl: string): Promise<string> => {
-    const blob = await (await fetch(dataUrl)).blob();
-    const formData = new FormData();
-    formData.append("image", blob, `${Date.now()}.webp`);
+    // 🚀 NEW: Preprocess on client side first
+    console.time("Client-side preprocessing");
+    const preprocessedBlob = await preprocessImageForUpload(dataUrl);
+    console.timeEnd("Client-side preprocessing");
 
+    const formData = new FormData();
+    formData.append("image", preprocessedBlob, `${Date.now()}.webp`);
+
+    console.time("Server upload");
     const res = await fetch("/api/user/upload", {
       method: "POST",
       body: formData,
     });
+    console.timeEnd("Server upload");
 
     const result = await res.json();
 
     if (!result.blobUrl) {
       throw new Error("Upload failed");
     }
+
     localStorage.setItem("Avatar", result?.blobUrl);
 
     uploadAvatarFromLocalStorage(userId, result?.blobUrl).catch((err) => {
       console.error("Avatar upload failed:", err);
     });
+
     return result.blobUrl;
   };
 
