@@ -1,6 +1,923 @@
+// "use client";
+
+// import React, { memo, useEffect, useMemo, useState } from "react";
+// import {
+//   Box,
+//   Button,
+//   Grid,
+//   Typography,
+//   IconButton,
+//   Dialog,
+//   DialogActions,
+//   DialogContent,
+//   CircularProgress,
+//   useMediaQuery,
+//   createTheme,
+//   ThemeProvider,
+//   Container,
+//   Paper,
+//   Stepper,
+//   Step,
+//   StepLabel,
+//   LinearProgress,
+// } from "@mui/material";
+// import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
+// import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+// import Cropper from "react-easy-crop";
+// import { useRouter } from "next/navigation";
+// import "@tensorflow/tfjs";
+// import { useFormik } from "formik";
+// import * as Yup from "yup";
+// import { EditIcon } from "lucide-react";
+// import Carousel from "@/commonPage/Carousel";
+// import Fade from "@mui/material/Fade";
+// import { useDropzone } from "react-dropzone";
+
+// type Params = Promise<{ id: string }>;
+
+// const theme = createTheme({
+//   palette: {
+//     primary: { main: "#FF2D55", light: "#FF617B", dark: "#CC1439" },
+//     secondary: { main: "#7000FF", light: "#9B4DFF", dark: "#5200CC" },
+//     success: { main: "#00D179" },
+//     background: { default: "#0A0118" },
+//   },
+// });
+
+// const ParticleField = memo(() => {
+//   const isMobile = useMediaQuery("(max-width:600px)");
+
+//   const particles = useMemo(() => {
+//     const count = isMobile ? 15 : 50;
+//     return [...Array(count)].map((_, i) => ({
+//       id: i,
+//       size: Math.random() * (isMobile ? 4 : 6) + 2,
+//       x: Math.random() * 100,
+//       y: Math.random() * 100,
+//       duration: Math.random() * (isMobile ? 15 : 20) + 10,
+//       delay: -Math.random() * 20,
+//     }));
+//   }, [isMobile]);
+
+//   return (
+//     <Box
+//       sx={{
+//         position: "absolute",
+//         width: "100%",
+//         height: "100%",
+//         overflow: "hidden",
+//         opacity: 0.6,
+//       }}
+//     >
+//       {particles.map((particle) => (
+//         <Box
+//           key={particle.id}
+//           sx={{
+//             position: "absolute",
+//             width: particle.size,
+//             height: particle.size,
+//             left: `${particle.x}%`,
+//             top: `${particle.y}%`,
+//             background: "linear-gradient(45deg, #FF2D55, #7000FF)",
+//             borderRadius: "50%",
+//             animation: `float ${particle.duration}s infinite linear`,
+//             animationDelay: `${particle.delay}s`,
+//             "@keyframes float": {
+//               "0%": {
+//                 transform: "translate(0, 0) rotate(0deg)",
+//                 opacity: 0,
+//               },
+//               "50%": {
+//                 opacity: 0.8,
+//               },
+//               "100%": {
+//                 transform: "translate(100px, -100px) rotate(360deg)",
+//                 opacity: 0,
+//               },
+//             },
+//           }}
+//         />
+//       ))}
+//     </Box>
+//   );
+// });
+
+// export default function UploadAvatar({ params }: { params: Params }) {
+//   const router = useRouter();
+//   const [avatarImage, setAvatarImage] = useState<string | null>(null);
+//   const [croppedAvatar, setCroppedAvatar] = useState<string | null>(null);
+//   const [crop, setCrop] = useState({ x: 0, y: 0 });
+//   const [zoom, setZoom] = useState(1);
+//   const [croppedArea, setCroppedArea] = useState<any>(null);
+//   const [openCropper, setOpenCropper] = useState(false);
+//   const [userId, setUserId] = useState<string>("");
+//   const [isUploading, setIsUploading] = useState(false);
+//   const [isCropAnimating, setIsCropAnimating] = useState(false);
+//   const [uploadProgress, setUploadProgress] = useState(0);
+//   const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(
+//     null,
+//   );
+//   const [isCropping, setIsCropping] = useState(false);
+//   const [storedAvatar, setStoredAvatar] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     const avatarFromStorage = localStorage.getItem("Avatar");
+//     if (avatarFromStorage) {
+//       setStoredAvatar(avatarFromStorage);
+//       setUploadedAvatarUrl(avatarFromStorage);
+//     }
+//   }, []);
+
+//   useEffect(() => {
+//     (async () => {
+//       const p = await params;
+//       setUserId(p.id);
+//     })();
+//   }, [params]);
+
+//   const onDrop = React.useCallback((acceptedFiles: File[]) => {
+//     const file = acceptedFiles[0];
+//     if (!file) return;
+
+//     const imageUrl = URL.createObjectURL(file);
+
+//     setCrop({ x: 0, y: 0 });
+//     setZoom(1);
+//     setCroppedArea(null);
+//     setUploadProgress(0);
+//     setUploadedAvatarUrl(null);
+
+//     setAvatarImage(imageUrl);
+//     setOpenCropper(true);
+//   }, []);
+
+//   const { getRootProps, getInputProps, isDragActive } = useDropzone({
+//     onDrop,
+//     accept: {
+//       "image/*": [],
+//     },
+//     maxFiles: 1,
+//   });
+
+//   const uploadImage = async (
+//     data: string | Blob,
+//     onProgress?: (progress: number) => void,
+//   ): Promise<string> => {
+//     let blob: Blob;
+//     if (typeof data === "string") {
+//       blob = await (await fetch(data)).blob();
+//     } else {
+//       blob = data;
+//     }
+
+//     const formData = new FormData();
+//     formData.append("image", blob, `${Date.now()}.jpg`);
+
+//     return new Promise((resolve, reject) => {
+//       const xhr = new XMLHttpRequest();
+
+//       xhr.upload.addEventListener("progress", (event) => {
+//         if (event.lengthComputable && onProgress) {
+//           const progress = Math.round((event.loaded / event.total) * 100);
+//           onProgress(progress);
+//         }
+//       });
+
+//       xhr.addEventListener("load", () => {
+//         if (xhr.status === 200) {
+//           try {
+//             const result = JSON.parse(xhr.responseText);
+//             if (!result.blobUrl) {
+//               reject(new Error("Upload failed"));
+//             }
+//             localStorage.setItem("Avatar", result?.blobUrl);
+//             resolve(result.blobUrl);
+//           } catch (e) {
+//             reject(new Error("Invalid response"));
+//           }
+//         } else {
+//           reject(new Error("Upload failed"));
+//         }
+//       });
+
+//       xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+//       xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
+
+//       xhr.open("POST", "/api/user/upload");
+//       xhr.send(formData);
+//     });
+//   };
+
+//   const handleCropConfirm = async () => {
+//     if (!croppedArea || !avatarImage) return;
+
+//     setIsCropping(true);
+//     setUploadProgress(0);
+
+//     const image = new Image();
+//     image.src = avatarImage;
+
+//     image.onload = async () => {
+//       const scaleX = image.naturalWidth / image.width;
+//       const scaleY = image.naturalHeight / image.height;
+
+//       const { x, y, width, height } = croppedArea;
+
+//       const workCanvas = document.createElement("canvas");
+//       workCanvas.width = width * scaleX;
+//       workCanvas.height = height * scaleY;
+
+//       const wctx = workCanvas.getContext("2d");
+//       if (!wctx) return;
+
+//       wctx.imageSmoothingEnabled = true;
+//       wctx.imageSmoothingQuality = "high";
+
+//       wctx.drawImage(
+//         image,
+//         x * scaleX,
+//         y * scaleY,
+//         width * scaleX,
+//         height * scaleY,
+//         0,
+//         0,
+//         workCanvas.width,
+//         workCanvas.height,
+//       );
+
+//       const TARGET_WIDTH = 1000;
+//       const TARGET_HEIGHT = 1250;
+
+//       const outCanvas = document.createElement("canvas");
+//       outCanvas.width = TARGET_WIDTH;
+//       outCanvas.height = TARGET_HEIGHT;
+
+//       const octx = outCanvas.getContext("2d");
+//       if (!octx) return;
+
+//       octx.imageSmoothingEnabled = true;
+//       octx.imageSmoothingQuality = "high";
+
+//       octx.drawImage(workCanvas, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+
+//       outCanvas.toBlob(
+//         async (blob) => {
+//           if (!blob) return;
+
+//           const blobUrl = URL.createObjectURL(blob);
+//           setIsCropAnimating(true);
+
+//           try {
+//             setUploadProgress(25);
+//             await new Promise((resolve) => setTimeout(resolve, 500));
+//             const uploadedUrl = await uploadImage(blob, (progress) => {
+//               const mappedProgress = 25 + progress * 0.7;
+//               setUploadProgress(Math.min(95, Math.round(mappedProgress)));
+//             });
+
+//             setUploadProgress(100);
+//             await new Promise((resolve) => setTimeout(resolve, 300));
+
+//             setUploadedAvatarUrl(uploadedUrl);
+//             setCroppedAvatar(blobUrl);
+
+//             setTimeout(() => {
+//               setOpenCropper(false);
+//               setIsCropAnimating(false);
+//               setIsCropping(false);
+//               setUploadProgress(0);
+//             }, 300);
+//           } catch (error) {
+//             console.error("Upload failed:", error);
+//             setIsCropAnimating(false);
+//             setIsCropping(false);
+//             setUploadProgress(0);
+//           }
+//         },
+//         "image/jpg",
+//         0.8,
+//       );
+//     };
+//   };
+
+//   const handleNavigateToAvatarUpload = async () => {
+//     if (!uploadedAvatarUrl) {
+//       console.error("No uploaded avatar URL available");
+//       return;
+//     }
+
+//     setIsUploading(true);
+//     try {
+//       const res = await fetch("/api/user/avatarUpload", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           pid: userId,
+//           Questionable: 1,
+//           avatar: uploadedAvatarUrl,
+//         }),
+//       });
+
+//       if (!res.ok) {
+//         throw new Error("Avatar save failed");
+//       }
+
+//       await router.push(`/verify-identity/${userId}`);
+//     } catch (err) {
+//       console.error("Avatar upload failed:", err);
+//       setIsUploading(false);
+//     }
+//   };
+
+//   const onCropComplete = (_: any, croppedAreaPixels: any) => {
+//     setCroppedArea(croppedAreaPixels);
+//   };
+
+//   const handleCloseCropper = () => {
+//     if (!isCropping) {
+//       setOpenCropper(false);
+//       setCrop({ x: 0, y: 0 });
+//       setZoom(1);
+//       setUploadProgress(0);
+//     }
+//   };
+
+//   const formik = useFormik({
+//     initialValues: {
+//       avatar: "",
+//     },
+//     validationSchema: Yup.object().shape({
+//       avatar: Yup.string().required("Please upload your avatar"),
+//     }),
+//     onSubmit: async (values) => {
+//       // This will now be handled by handleNavigateToAvatarUpload
+//     },
+//   });
+
+//   return (
+//     <>
+//       <ThemeProvider theme={theme}>
+//         <Box
+//           sx={{
+//             display: "flex",
+//             background:
+//               "radial-gradient(circle at top left, #1A0B2E 0%, #000000 100%)",
+//             position: "relative",
+//             overflow: "hidden",
+//             width: "100%",
+//             minHeight: "100vh",
+//           }}
+//         >
+//           <ParticleField />
+//           <Container
+//             maxWidth="sm"
+//             sx={{
+//               px: { xs: 1, sm: 2 },
+//               py: 1,
+//             }}
+//           >
+//             <Paper
+//               elevation={24}
+//               sx={{
+//                 width: "100%",
+//                 p: { xs: 2, sm: 3, md: 4 },
+//                 background: "rgba(255, 255, 255, 0.05)",
+//                 backdropFilter: "blur(20px)",
+//                 border: "1px solid rgba(255, 255, 255, 0.1)",
+//                 overflow: "hidden",
+//               }}
+//             >
+//               <Stepper
+//                 activeStep={3}
+//                 alternativeLabel
+//                 sx={{
+//                   background: "transparent",
+//                   width: "100%",
+//                   margin: "0 auto 16px auto",
+//                 }}
+//               >
+//                 {[
+//                   "Profile Info",
+//                   "Verify Phone",
+//                   "Preferences",
+//                   "Avatar & Banner",
+//                   "About",
+//                 ].map((label) => (
+//                   <Step key={label}>
+//                     <StepLabel
+//                       sx={{
+//                         "& .MuiStepLabel-label": {
+//                           color: "#fff !important",
+//                           fontSize: { xs: "0.7rem", sm: "0.85rem" },
+//                         },
+//                         "& .MuiStepIcon-root": {
+//                           color: "rgba(255,255,255,0.3)",
+//                         },
+//                         "& .MuiStepIcon-root.Mui-active": {
+//                           color: "#c2185b",
+//                         },
+//                         "& .MuiStepIcon-root.Mui-completed": {
+//                           color: "#c2185b",
+//                         },
+//                       }}
+//                     ></StepLabel>
+//                   </Step>
+//                 ))}
+//               </Stepper>
+
+//               <form style={{ width: "100%" }}>
+//                 <Grid>
+//                   <Typography
+//                     sx={{
+//                       textAlign: "center",
+//                       color: "#ffffffff",
+//                       fontWeight: "bold",
+//                       fontSize: "0.875rem",
+//                     }}
+//                   >
+//                     Look your best! Upload a clear, confident photo of you. A
+//                     great pic gets great results.
+//                   </Typography>
+
+//                   <Grid item xs={12} sx={{ mt: 2, textAlign: "center" }}>
+//                     <Typography
+//                       variant="h6"
+//                       sx={{ color: "#c2185b", fontWeight: "bold", mb: 2 }}
+//                     >
+//                       Primary Profile Picture
+//                     </Typography>
+
+//                     <Box
+//                       {...getRootProps()}
+//                       sx={{
+//                         width: 200,
+//                         aspectRatio: "4 / 5",
+//                         border: "2px dashed #fff",
+//                         borderRadius: 4,
+//                         backgroundColor: isDragActive ? "#2a2a2a" : "#1d1d1d",
+//                         mx: "auto",
+//                         display: "flex",
+//                         alignItems: "center",
+//                         justifyContent: "center",
+//                         position: "relative",
+//                         overflow: "hidden",
+//                         cursor: "pointer",
+//                         transition: "0.3s",
+//                       }}
+//                     >
+//                       <input {...getInputProps()} />
+
+//                       {croppedAvatar || storedAvatar ? (
+//                         <>
+//                           <Box
+//                             component="img"
+//                             src={croppedAvatar || storedAvatar || ""}
+//                             sx={{
+//                               width: "100%",
+//                               height: "100%",
+//                               objectFit: "cover",
+//                             }}
+//                           />
+//                           <IconButton
+//                             sx={{
+//                               position: "absolute",
+//                               bottom: 8,
+//                               right: 8,
+//                               backgroundColor: "rgba(0,0,0,0.6)",
+//                               color: "#fff",
+//                             }}
+//                           >
+//                             <EditIcon />
+//                           </IconButton>
+//                         </>
+//                       ) : (
+//                         <PhotoCameraOutlinedIcon
+//                           sx={{ fontSize: 40, color: "#c2185b" }}
+//                         />
+//                       )}
+//                     </Box>
+
+//                     {formik.errors.avatar && (
+//                       <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+//                         {formik.errors.avatar}
+//                       </Typography>
+//                     )}
+//                   </Grid>
+
+//                   <Typography
+//                     sx={{
+//                       textAlign: "center",
+//                       color: "#ffffffff",
+//                       fontWeight: "bold",
+//                       mt: 2,
+//                       fontSize: "0.675rem",
+//                     }}
+//                   >
+//                     No nudity, vulgarity, cartoons, or objects. Real faces only
+//                     - this is a community of real people.
+//                   </Typography>
+
+//                   <Grid item xs={12} sx={{ textAlign: "center", mt: 2, mb: 4 }}>
+//                     <Button
+//                       onClick={handleNavigateToAvatarUpload}
+//                       disabled={isUploading || !uploadedAvatarUrl}
+//                       sx={{
+//                         width: 56,
+//                         height: 56,
+//                         borderRadius: "50%",
+//                         backgroundColor: "#c2185b",
+//                         color: "#fff",
+//                         "&:hover": { backgroundColor: "#ad1457" },
+//                         "&.Mui-disabled": {
+//                           backgroundColor: "rgba(194, 24, 91, 0.3)",
+//                         },
+//                       }}
+//                     >
+//                       {isUploading ? (
+//                         <>
+//                           <CircularProgress size={24} sx={{ color: "#fff" }} />
+//                           <Typography
+//                             sx={{
+//                               color: "#fff",
+//                               fontSize: "0.875rem",
+//                               position: "absolute",
+//                               top: "100%",
+//                               width: "400px",
+//                               marginTop: "8px",
+//                             }}
+//                           >
+//                             Don't take your pants off yet, give us a sec...
+//                           </Typography>
+//                         </>
+//                       ) : (
+//                         <ArrowForwardIosIcon />
+//                       )}
+//                     </Button>
+//                   </Grid>
+
+//                   <Box sx={{ mt: 2, textAlign: "center", px: 2 }}>
+//                     <Typography
+//                       sx={{
+//                         color: "#fff",
+//                         fontWeight: "bold",
+//                         fontSize: "0.9rem",
+//                         mb: 1,
+//                       }}
+//                     >
+//                       Selfie Verification Guidelines
+//                     </Typography>
+
+//                     <Typography
+//                       sx={{
+//                         color: "rgba(255,255,255,0.75)",
+//                         fontSize: "0.8rem",
+//                         lineHeight: 1.6,
+//                       }}
+//                     >
+//                       This photo will be used for selfie verification to confirm
+//                       your identity. Make sure:
+//                     </Typography>
+
+//                     <Box
+//                       component="ul"
+//                       sx={{
+//                         textAlign: "left",
+//                         color: "rgba(255,255,255,0.7)",
+//                         fontSize: "0.8rem",
+//                         mt: 1,
+//                         pl: 3,
+//                       }}
+//                     >
+//                       <li>Your full face is clearly visible</li>
+//                       <li>No sunglasses, masks, or heavy filters</li>
+//                       <li>Good lighting and no blur</li>
+//                       <li>No nudity or inappropriate content</li>
+//                     </Box>
+
+//                     <Typography
+//                       sx={{
+//                         color: "#c2185b",
+//                         fontSize: "0.8rem",
+//                         fontWeight: 500,
+//                         mt: 1,
+//                       }}
+//                     >
+//                       Please use a real photo of yourself, it helps us keep our
+//                       community safe and genuine.
+//                     </Typography>
+//                   </Box>
+//                 </Grid>
+//               </form>
+
+//               <Carousel title="Exciting Events and Real Connections Start Here!" />
+//             </Paper>
+//           </Container>
+//         </Box>
+
+//         <Dialog
+//           open={openCropper}
+//           onClose={handleCloseCropper}
+//           maxWidth="sm"
+//           fullWidth
+//         >
+//           <DialogContent
+//             sx={{
+//               backgroundColor: "#000",
+//               color: "#fff",
+//               minHeight: "400px",
+//               position: "relative",
+//               padding: 0,
+//             }}
+//           >
+//             {!isCropping ? (
+//               <Cropper
+//                 key={avatarImage}
+//                 image={avatarImage || undefined}
+//                 crop={crop}
+//                 zoom={zoom}
+//                 objectFit="contain"
+//                 aspect={4 / 5}
+//                 onCropChange={setCrop}
+//                 onZoomChange={setZoom}
+//                 onCropComplete={onCropComplete}
+//                 onMediaLoaded={() => {
+//                   setTimeout(() => {
+//                     setZoom(1);
+//                   }, 50);
+//                 }}
+//               />
+//             ) : (
+//               <Box
+//                 sx={{
+//                   height: "450px",
+//                   display: "flex",
+//                   flexDirection: "column",
+//                   alignItems: "center",
+//                   justifyContent: "center",
+//                   p: 4,
+//                   background:
+//                     "linear-gradient(145deg, #0A0118 0%, #1A0B2E 100%)",
+//                   position: "relative",
+//                   overflow: "hidden",
+//                 }}
+//               >
+//                 <Box
+//                   sx={{
+//                     position: "absolute",
+//                     width: "100%",
+//                     height: "100%",
+//                     opacity: 0.3,
+//                     "&::before": {
+//                       content: '""',
+//                       position: "absolute",
+//                       width: "200%",
+//                       height: "200%",
+//                       background:
+//                         "radial-gradient(circle, #FF2D55 0%, transparent 50%)",
+//                       animation: "pulse 4s ease-in-out infinite",
+//                       transform: "translate(-50%, -50%)",
+//                     },
+//                     "@keyframes pulse": {
+//                       "0%, 100%": {
+//                         opacity: 0.3,
+//                         transform: "translate(-50%, -50%) scale(1)",
+//                       },
+//                       "50%": {
+//                         opacity: 0.6,
+//                         transform: "translate(-50%, -50%) scale(1.2)",
+//                       },
+//                     },
+//                   }}
+//                 />
+
+//                 <Box
+//                   sx={{
+//                     position: "relative",
+//                     zIndex: 1,
+//                     display: "flex",
+//                     flexDirection: "column",
+//                     alignItems: "center",
+//                     width: "100%",
+//                   }}
+//                 >
+//                   <Box
+//                     sx={{ position: "relative", display: "inline-flex", mb: 3 }}
+//                   >
+//                     <CircularProgress
+//                       size={80}
+//                       thickness={4}
+//                       variant="determinate"
+//                       value={uploadProgress}
+//                       sx={{
+//                         color: "#c2185b",
+//                         "& .MuiCircularProgress-circle": {
+//                           strokeLinecap: "round",
+//                           transition: "stroke-dashoffset 0.5s ease",
+//                         },
+//                       }}
+//                     />
+//                     <Box
+//                       sx={{
+//                         top: 0,
+//                         left: 0,
+//                         bottom: 0,
+//                         right: 0,
+//                         position: "absolute",
+//                         display: "flex",
+//                         alignItems: "center",
+//                         justifyContent: "center",
+//                       }}
+//                     >
+//                       <Typography
+//                         variant="h6"
+//                         sx={{
+//                           color: "#fff",
+//                           fontWeight: "bold",
+//                           fontSize: "1.2rem",
+//                           textShadow: "0 0 10px rgba(194, 24, 91, 0.5)",
+//                         }}
+//                       >
+//                         {uploadProgress}%
+//                       </Typography>
+//                     </Box>
+//                   </Box>
+
+//                   <Typography
+//                     variant="h5"
+//                     sx={{
+//                       color: "#fff",
+//                       mb: 1,
+//                       fontWeight: 600,
+//                       background: "linear-gradient(45deg, #FF2D55, #7000FF)",
+//                       WebkitBackgroundClip: "text",
+//                       WebkitTextFillColor: "transparent",
+//                       animation: "fadeInOut 2s ease-in-out infinite",
+//                       "@keyframes fadeInOut": {
+//                         "0%, 100%": { opacity: 0.8 },
+//                         "50%": { opacity: 1 },
+//                       },
+//                     }}
+//                   >
+//                     {uploadProgress < 25 && "Cropping your image..."}
+//                     {uploadProgress >= 25 &&
+//                       uploadProgress < 50 &&
+//                       "Optimizing quality..."}
+//                     {uploadProgress >= 50 &&
+//                       uploadProgress < 75 &&
+//                       "Uploading to cloud..."}
+//                     {uploadProgress >= 75 &&
+//                       uploadProgress < 100 &&
+//                       "Almost there..."}
+//                     {uploadProgress === 100 && "Complete! 🎉"}
+//                   </Typography>
+
+//                   <Box sx={{ width: "100%", maxWidth: "320px", mt: 3 }}>
+//                     <LinearProgress
+//                       variant="determinate"
+//                       value={uploadProgress}
+//                       sx={{
+//                         height: 10,
+//                         borderRadius: 5,
+//                         backgroundColor: "rgba(255,255,255,0.1)",
+//                         "& .MuiLinearProgress-bar": {
+//                           borderRadius: 5,
+//                           background:
+//                             "linear-gradient(90deg, #FF2D55, #7000FF)",
+//                           boxShadow: "0 0 20px rgba(194, 24, 91, 0.5)",
+//                           transition: "transform 0.3s ease",
+//                         },
+//                       }}
+//                     />
+
+//                     <Box
+//                       sx={{
+//                         display: "flex",
+//                         justifyContent: "space-between",
+//                         mt: 1.5,
+//                         width: "100%",
+//                       }}
+//                     >
+//                       <Typography
+//                         variant="caption"
+//                         sx={{
+//                           color: "rgba(255,255,255,0.6)",
+//                           fontSize: "0.75rem",
+//                         }}
+//                       >
+//                         {uploadProgress < 25 && "Cropping"}
+//                         {uploadProgress >= 25 &&
+//                           uploadProgress < 50 &&
+//                           "Optimizing"}
+//                         {uploadProgress >= 50 &&
+//                           uploadProgress < 75 &&
+//                           "Uploading"}
+//                         {uploadProgress >= 75 &&
+//                           uploadProgress < 100 &&
+//                           "Finalizing"}
+//                         {uploadProgress === 100 && "Done"}
+//                       </Typography>
+//                       <Typography
+//                         variant="caption"
+//                         sx={{
+//                           color: "#fff",
+//                           fontWeight: "bold",
+//                           fontSize: "0.75rem",
+//                         }}
+//                       >
+//                         {uploadProgress}% complete
+//                       </Typography>
+//                     </Box>
+
+//                     {uploadProgress === 100 && (
+//                       <Box
+//                         sx={{
+//                           mt: 3,
+//                           display: "flex",
+//                           alignItems: "center",
+//                           justifyContent: "center",
+//                           gap: 1,
+//                           animation: "slideUp 0.5s ease",
+//                           "@keyframes slideUp": {
+//                             "0%": { opacity: 0, transform: "translateY(20px)" },
+//                             "100%": { opacity: 1, transform: "translateY(0)" },
+//                           },
+//                         }}
+//                       >
+//                         <Typography
+//                           variant="body2"
+//                           sx={{
+//                             color: "#00D179",
+//                             fontWeight: 500,
+//                           }}
+//                         >
+//                           ✓ Upload successful!
+//                         </Typography>
+//                       </Box>
+//                     )}
+//                   </Box>
+//                 </Box>
+//               </Box>
+//             )}
+//           </DialogContent>
+//           <DialogActions
+//             sx={{
+//               background: "linear-gradient(145deg, #0A0118 0%, #1A0B2E 100%)",
+//               borderTop: "1px solid rgba(255,255,255,0.08)",
+//               justifyContent: "center",
+//               p: 2,
+//             }}
+//           >
+//             {!isCropping ? (
+//               <>
+//                 <Button
+//                   variant="outlined"
+//                   onClick={handleCloseCropper}
+//                   sx={{
+//                     color: "#fff",
+//                     borderColor: "rgba(255,255,255,0.3)",
+//                     "&:hover": {
+//                       borderColor: "#fff",
+//                       backgroundColor: "rgba(255,255,255,0.1)",
+//                     },
+//                   }}
+//                 >
+//                   Cancel
+//                 </Button>
+//                 <Button
+//                   variant="contained"
+//                   onClick={handleCropConfirm}
+//                   sx={{
+//                     backgroundColor: "#c2185b",
+//                     "&:hover": { backgroundColor: "#ad1457" },
+//                     ml: 1,
+//                   }}
+//                 >
+//                   Crop & Upload
+//                 </Button>
+//               </>
+//             ) : (
+//               <Button
+//                 variant="outlined"
+//                 sx={{
+//                   color: "#fff",
+//                   border: "none",
+//                   backgroundColor: "#c2185b",
+//                 }}
+//               >
+//                 Processing...
+//               </Button>
+//             )}
+//           </DialogActions>
+//         </Dialog>
+//       </ThemeProvider>
+//     </>
+//   );
+// }
+
+
 "use client";
 
-import React, { memo, useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -32,7 +949,6 @@ import Carousel from "@/commonPage/Carousel";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import Fade from "@mui/material/Fade";
 
 type Params = Promise<{ id: string }>;
 
@@ -126,13 +1042,16 @@ export default function UploadAvatar({ params }: { params: Params }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSelfieUploading, setIsSelfieUploading] = useState(false);
   const [step, setStep] = useState<StepType>("intro");
+  const [preview, setPreview] = useState<string | null>(null);
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selfieStatus, setSelfieStatus] = useState<SelfieStatus>("idle");
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<DialogType>("success");
   const [dialogMessage, setDialogMessage] = useState("");
-  const [isCropAnimating, setIsCropAnimating] = useState(false);
 
   const openDialog = (type: DialogType, message: string) => {
     setDialogType(type);
@@ -152,44 +1071,31 @@ export default function UploadAvatar({ params }: { params: Params }) {
     if (file) {
       const reader = new FileReader();
       reader.onload = () => {
-        const imageData = reader.result as string;
-
-        setCrop({ x: 0, y: 0 });
-        setZoom(1);
-        setCroppedArea(null);
-
-        setAvatarImage(null);
-
-        setTimeout(() => {
-          setAvatarImage(imageData);
-          setOpenCropper(true);
-        }, 50);
+        setAvatarImage(reader.result as string);
+        setOpenCropper(true);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleCropConfirm = async () => {
+  const handleCropConfirm = () => {
     if (!croppedArea || !avatarImage) return;
 
     const image = new Image();
     image.src = avatarImage;
 
-    image.onload = async () => {
+    image.onload = () => {
+      const work = document.createElement("canvas");
       const scaleX = image.naturalWidth / image.width;
       const scaleY = image.naturalHeight / image.height;
 
       const { x, y, width, height } = croppedArea;
 
-      const workCanvas = document.createElement("canvas");
-      workCanvas.width = width * scaleX;
-      workCanvas.height = height * scaleY;
+      work.width = Math.round(width * scaleX);
+      work.height = Math.round(height * scaleY);
 
-      const wctx = workCanvas.getContext("2d");
+      const wctx = work.getContext("2d");
       if (!wctx) return;
-
-      wctx.imageSmoothingEnabled = true;
-      wctx.imageSmoothingQuality = "high";
 
       wctx.drawImage(
         image,
@@ -199,45 +1105,37 @@ export default function UploadAvatar({ params }: { params: Params }) {
         height * scaleY,
         0,
         0,
-        workCanvas.width,
-        workCanvas.height,
+        work.width,
+        work.height,
       );
 
-      const TARGET_WIDTH = 1000;
-      const TARGET_HEIGHT = 1250;
+      const MAX_SIDE = 768;
+      const maxDim = Math.max(work.width, work.height);
+      const scale = maxDim > MAX_SIDE ? MAX_SIDE / maxDim : 1;
 
-      const outCanvas = document.createElement("canvas");
-      outCanvas.width = TARGET_WIDTH;
-      outCanvas.height = TARGET_HEIGHT;
+      const out = document.createElement("canvas");
+      out.width = Math.round(work.width * scale);
+      out.height = Math.round(work.height * scale);
 
-      const octx = outCanvas.getContext("2d");
+      const octx = out.getContext("2d");
       if (!octx) return;
 
       octx.imageSmoothingEnabled = true;
       octx.imageSmoothingQuality = "high";
+      octx.drawImage(work, 0, 0, out.width, out.height);
 
-      octx.drawImage(workCanvas, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+      const JPEG_QUALITY = 0.85;
+      const dataUrl = out.toDataURL("image/jpeg", JPEG_QUALITY);
 
-      outCanvas.toBlob(
-        (blob) => {
-          if (!blob) return;
-
-          const blobUrl = URL.createObjectURL(blob);
-          setIsCropAnimating(true);
-
-          setTimeout(() => {
-            setCroppedAvatar(blobUrl);
-            formik.setFieldValue("avatar", blob);
-            setOpenCropper(false);
-
-            setTimeout(() => {
-              setIsCropAnimating(false);
-            }, 300);
-          }, 150);
-        },
-        "image/webp",
-        0.8,
+      setCroppedAvatar(dataUrl);
+      const avatarbase = dataUrl.split(",")[1];
+      setAvatarBase64(avatarbase);
+      console.log(
+        "Generated JPEG avatar base64 (first 100 chars):",
+        avatarbase.substring(0, 100),
       );
+      formik.setFieldValue("avatar", dataUrl);
+      setOpenCropper(false);
     };
   };
 
@@ -268,16 +1166,10 @@ export default function UploadAvatar({ params }: { params: Params }) {
     localStorage.setItem("avatarS3Key", data.key);
   }
 
-  const uploadImage = async (data: string | Blob): Promise<string> => {
-    let blob: Blob;
-    if (typeof data === "string") {
-      blob = await (await fetch(data)).blob();
-    } else {
-      blob = data;
-    }
-
+  const uploadImage = async (dataUrl: string): Promise<string> => {
+    const blob = await (await fetch(dataUrl)).blob();
     const formData = new FormData();
-    formData.append("image", blob, `${Date.now()}.webp`);
+    formData.append("image", blob, `${Date.now()}.jpg`);
 
     const res = await fetch("/api/user/upload", {
       method: "POST",
@@ -351,7 +1243,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
     ctx.drawImage(img, 0, 0);
 
     return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob!), "image/webp", 0.9);
+      canvas.toBlob((blob) => resolve(blob!), "image/jpeg", 0.92);
     });
   }
 
@@ -371,7 +1263,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
     await fetch(uploadUrl, {
       method: "PUT",
       headers: {
-        "Content-Type": "image/webp",
+        "Content-Type": file.type || "image/jpeg",
       },
       body: normalizedBlob,
     });
@@ -432,12 +1324,19 @@ export default function UploadAvatar({ params }: { params: Params }) {
       openDialog(
         "error",
         err.message ||
-        "Verification failed. Double check your profile picture and verification picture are of your face.",
+          "Verification failed. Double check your profile picture and verification picture are of your face.",
       );
     } finally {
       setSelfieStatus("idle");
     }
   };
+
+  const handleTakeSelfie = useCallback(() => {
+    const input = document.getElementById("selfie-upload") as HTMLInputElement;
+    if (input) {
+      input.click();
+    }
+  }, []);
 
   const handleSkipSelfie = () => {
     localStorage.setItem("selfieSkipped", "true");
@@ -653,7 +1552,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                         <Box
                           sx={{
                             width: 200,
-                            aspectRatio: "4 / 5",
+                            height: 200,
                             border: "2px dashed #fff",
                             borderRadius: 4,
                             backgroundColor: "#1d1d1d",
@@ -675,24 +1574,17 @@ export default function UploadAvatar({ params }: { params: Params }) {
                           <label htmlFor="upload-avatar">
                             {croppedAvatar ? (
                               <>
-                                <Box
-                                  component="img"
+                                <img
                                   src={croppedAvatar}
                                   alt="Cropped Avatar"
-                                  sx={{
+                                  style={{
                                     width: "100%",
                                     height: "100%",
                                     objectFit: "cover",
+                                    borderRadius: "16px",
                                     display: "block",
-                                    transition:
-                                      "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-                                    transform: isCropAnimating
-                                      ? "scale(0.92)"
-                                      : "scale(1)",
-                                    opacity: isCropAnimating ? 0 : 1,
                                   }}
                                 />
-
                                 <IconButton
                                   component="span"
                                   sx={{
@@ -996,7 +1888,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
                       <Box
                         sx={{
                           width: 200,
-                          aspectRatio: "4 / 5",
+                          height: 200,
                           mx: "auto",
                           borderRadius: "10px",
                           overflow: "hidden",
@@ -1243,15 +2135,7 @@ export default function UploadAvatar({ params }: { params: Params }) {
 
               <Carousel title="Exciting Events and Real Connections Start Here!" />
 
-              <Dialog
-                open={openCropper}
-                onClose={() => {
-                  setOpenCropper(false);
-                  setCrop({ x: 0, y: 0 });
-                  setZoom(1);
-                }}
-                TransitionComponent={Fade}
-              >
+              <Dialog open={openCropper} onClose={() => setOpenCropper(false)}>
                 <DialogContent
                   sx={{
                     backgroundColor: "#000",
@@ -1263,11 +2147,10 @@ export default function UploadAvatar({ params }: { params: Params }) {
                   }}
                 >
                   <Cropper
-                    key={avatarImage}
                     image={avatarImage || undefined}
                     crop={crop}
                     zoom={zoom}
-                    aspect={4 / 5}
+                    aspect={1}
                     onCropChange={setCrop}
                     onZoomChange={setZoom}
                     onCropComplete={onCropComplete}
