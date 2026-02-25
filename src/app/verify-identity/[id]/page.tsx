@@ -138,11 +138,9 @@ export default function SelfieVerification({ params }: { params: Params }) {
   const [selfieStatus, setSelfieStatus] = useState<SelfieStatus>("idle");
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [step, setStep] = useState<StepType>("selfie");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<DialogType>("success");
-  const [dialogMessage, setDialogMessage] = useState("");
   const [userId, setUserId] = useState<string>("");
   const [showVerifyButton, setShowVerifyButton] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -150,12 +148,6 @@ export default function SelfieVerification({ params }: { params: Params }) {
       setUserId(p.id);
     })();
   }, [params]);
-
-  const openDialog = (type: DialogType, message: string) => {
-    setDialogType(type);
-    setDialogMessage(message);
-    setDialogOpen(true);
-  };
 
   const uploadedAvatar = localStorage.getItem("Avatar");
 
@@ -258,12 +250,11 @@ export default function SelfieVerification({ params }: { params: Params }) {
 
       setStep("success");
     } catch (err: any) {
-      setStep("failed");
-      openDialog(
-        "error",
-        err.message ||
+      setErrorMessage(
+        err?.message ||
           "Verification failed. Please try again with better lighting.",
       );
+      setStep("failed");
     } finally {
       setSelfieStatus("idle");
     }
@@ -642,46 +633,94 @@ export default function SelfieVerification({ params }: { params: Params }) {
             )}
 
             {step === "failed" && (
-              <Box textAlign="center" sx={{ py: 2 }}>
+              <Box
+                textAlign="center"
+                sx={{
+                  py: 4,
+                  px: 2,
+                  animation: "fadeIn 0.4s ease",
+                  "@keyframes fadeIn": {
+                    from: { opacity: 0, transform: "translateY(10px)" },
+                    to: { opacity: 1, transform: "translateY(0)" },
+                  },
+                }}
+              >
+                {/* Icon with glow */}
                 <Box
                   sx={{
-                    width: 90,
-                    height: 90,
+                    width: 80,
+                    height: 80,
                     mx: "auto",
                     mb: 3,
                     borderRadius: "50%",
-                    background: "rgba(255,45,85,0.15)",
+                    background:
+                      "radial-gradient(circle at center, rgba(255,45,85,0.25), rgba(255,45,85,0.08))",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <ErrorOutlineIcon sx={{ fontSize: 50, color: "#FF2D55" }} />
+                  <ErrorOutlineIcon sx={{ fontSize: 40, color: "#FF2D55" }} />
                 </Box>
 
+                {/* Title */}
                 <Typography
-                  variant="h5"
-                  sx={{ color: "#FF2D55", fontWeight: 700, mb: 2 }}
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    mb: 1,
+                    fontSize: "1.8rem",
+                    background: "linear-gradient(45deg,#FF2D55,#FF617B)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
                 >
                   Verification Failed
                 </Typography>
 
-                <Typography sx={{ color: "rgba(255,255,255,0.7)", mb: 3 }}>
-                  We couldn't match your selfie with your profile photo.
-                </Typography>
-
+                {/* Reason Card */}
                 <Box
                   sx={{
-                    background: "rgba(255,255,255,0.05)",
-                    borderRadius: 3,
-                    p: 2.5,
+                    mt: 3,
                     mb: 3,
+                    p: 2,
+                    borderRadius: 3,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: "0.85rem",
+                      color: "rgba(255,255,255,0.5)",
+                      mb: 0.5,
+                      textTransform: "uppercase",
+                      letterSpacing: 1,
+                    }}
+                  >
+                    Reason
+                  </Typography>
+
+                  <Typography sx={{ color: "rgba(255,255,255,0.85)" }}>
+                    {errorMessage}
+                  </Typography>
+                </Box>
+
+                {/* Tips Section */}
+                <Box
+                  sx={{
+                    background:
+                      "linear-gradient(135deg, rgba(255,45,85,0.08), rgba(112,0,255,0.08))",
+                    borderRadius: 3,
+                    p: 3,
+                    mb: 4,
                     textAlign: "left",
                   }}
                 >
-                  <Typography sx={{ color: "#fff", fontWeight: 600, mb: 1.5 }}>
+                  <Typography sx={{ color: "#fff", fontWeight: 700, mb: 2 }}>
                     Tips for better results:
                   </Typography>
+
                   {[
                     "Face the camera directly with good lighting",
                     "Remove sunglasses, hats, or masks",
@@ -693,131 +732,231 @@ export default function SelfieVerification({ params }: { params: Params }) {
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 1,
-                        mb: 1,
-                        color: "rgba(255,255,255,0.7)",
+                        gap: 1.5,
+                        mb: 1.5,
+                        color: "rgba(255,255,255,0.75)",
                         fontSize: "0.9rem",
                       }}
                     >
-                      <CheckCircleIcon
-                        sx={{ fontSize: 16, color: "#FF2D55" }}
-                      />
+                      <Box
+                        sx={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          background: "#FF2D55",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.7rem",
+                          color: "#fff",
+                        }}
+                      >
+                        ✓
+                      </Box>
                       {tip}
                     </Box>
                   ))}
                 </Box>
 
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      onClick={handleChangeProfilePicture}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 3,
-                        borderColor: "rgba(255,255,255,0.2)",
-                        color: "#fff",
-                      }}
-                    >
-                      Change Photo
-                    </Button>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      onClick={() => {
-                        setStep("selfie");
-                        setSelfiePreview(null);
-                        setShowVerifyButton(false);
-                      }}
-                      sx={{
-                        background: "linear-gradient(45deg, #FF2D55, #7000FF)",
-                        py: 1.5,
-                        borderRadius: 3,
-                      }}
-                    >
-                      Try Again
-                    </Button>
-                  </Grid>
-                </Grid>
+                {/* Buttons */}
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={handleChangeProfilePicture}
+                    sx={{
+                      py: 1.6,
+                      borderRadius: 3,
+                      borderColor: "rgba(255,255,255,0.25)",
+                      color: "#fff",
+                      fontWeight: 600,
+                      "&:hover": {
+                        borderColor: "#FF2D55",
+                        backgroundColor: "rgba(255,45,85,0.08)",
+                      },
+                    }}
+                  >
+                    Change Photo
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={() => {
+                      setStep("selfie");
+                      setSelfiePreview(null);
+                      setShowVerifyButton(false);
+                    }}
+                    sx={{
+                      background: "linear-gradient(45deg,#FF2D55,#7000FF)",
+                      py: 1.6,
+                      borderRadius: 3,
+                      fontWeight: 700,
+                      boxShadow: "0 6px 20px rgba(255,45,85,0.4)",
+                      "&:hover": {
+                        opacity: 0.9,
+                      },
+                    }}
+                  >
+                    Try Again
+                  </Button>
+                </Box>
               </Box>
             )}
 
             {step === "success" && (
-              <Box textAlign="center" sx={{ py: 2 }}>
+              <Box
+                textAlign="center"
+                sx={{
+                  py: 4,
+                  px: 2,
+                  animation: "fadeIn 0.4s ease",
+                  "@keyframes fadeIn": {
+                    from: { opacity: 0, transform: "translateY(10px)" },
+                    to: { opacity: 1, transform: "translateY(0)" },
+                  },
+                }}
+              >
+                {/* Avatar with strong glow */}
                 <Box
                   sx={{
                     position: "relative",
-                    width: 120,
-                    height: 120,
+                    width: 140,
+                    height: 140,
                     mx: "auto",
                     mb: 3,
                   }}
                 >
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      inset: -8,
+                      borderRadius: "50%",
+                      background:
+                        "radial-gradient(circle, rgba(0,209,121,0.5), transparent 70%)",
+                      filter: "blur(8px)",
+                    }}
+                  />
                   <Avatar
                     src={uploadedAvatar || ""}
                     sx={{
                       width: "100%",
                       height: "100%",
                       border: "4px solid #00D179",
-                      boxShadow: "0 0 30px rgba(0,209,121,0.5)",
                     }}
                   />
                   <GlowingBadge />
                 </Box>
 
+                {/* Title */}
                 <Typography
                   variant="h4"
-                  sx={{ color: "#00D179", fontWeight: 800, mb: 1 }}
+                  sx={{
+                    fontWeight: 800,
+                    mb: 1,
+                    fontSize: "1.8rem",
+                    background: "linear-gradient(45deg,#FF2D55,#FF617B)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
                 >
-                  Verified!
+                  You're Verified!
                 </Typography>
 
-                <Typography sx={{ color: "rgba(255,255,255,0.8)", mb: 4 }}>
-                  Your identity has been confirmed. You're now a verified
-                  member.
+                {/* Subtitle */}
+                <Typography
+                  sx={{
+                    color: "rgba(255,255,255,0.75)",
+                    maxWidth: 320,
+                    mx: "auto",
+                    mb: 4,
+                    fontSize: "1rem",
+                  }}
+                >
+                  Your identity has been confirmed. Your profile now shows a
+                  trusted verification badge.
                 </Typography>
 
+                {/* Benefits Card */}
                 <Box
                   sx={{
                     background:
-                      "linear-gradient(135deg, rgba(255,45,85,0.1), rgba(112,0,255,0.1))",
-                    borderRadius: 3,
+                      "linear-gradient(135deg, rgba(0,209,121,0.12), rgba(0,163,255,0.08))",
+                    borderRadius: 4,
                     p: 3,
-                    mb: 4,
+                    mb: 5,
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(10px)",
+                    textAlign: "left",
                   }}
                 >
-                  <Typography sx={{ color: "#fff", fontWeight: 600, mb: 1 }}>
-                    ✨ Verified Benefits
-                  </Typography>
                   <Typography
                     sx={{
-                      color: "rgba(255,255,255,0.7)",
-                      fontSize: "0.95rem",
+                      color: "#fff",
+                      fontSize: "1.30rem",
+                      fontWeight: 600,
+                      mb: 2,
+                      textAlign: "center",
                     }}
                   >
-                    • Get more profile views
-                    <br />
-                    • Higher match confidence
-                    <br />
-                    • Trusted member badge
-                    <br />• Priority in searches
+                    Verified Member Benefits
                   </Typography>
+
+                  {[
+                    "Get more profile visibility",
+                    "Higher match confidence",
+                    "Trusted verification badge",
+                    "Priority in search results",
+                  ].map((benefit) => (
+                    <Box
+                      key={benefit}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        mb: 1.5,
+                        color: "rgba(255,255,255,0.8)",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          background: "#00D179",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.75rem",
+                          color: "#fff",
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✓
+                      </Box>
+                      {benefit}
+                    </Box>
+                  ))}
                 </Box>
 
+                {/* Continue Button */}
                 <Button
                   variant="contained"
                   onClick={() => router.push(`/bannerupload/${userId}`)}
                   endIcon={<ArrowForwardIosIcon />}
                   sx={{
-                    background: "linear-gradient(45deg, #FF2D55, #7000FF)",
-                    px: 4,
+                    background: "linear-gradient(45deg,#FF2D55,#7000FF)",
+                    px: 6,
                     py: 1.8,
-                    borderRadius: 3,
-                    fontSize: "1.1rem",
+                    borderRadius: 4,
+                    fontSize: "1.05rem",
+                    fontWeight: 700,
                     textTransform: "none",
+                    boxShadow: "0 10px 30px rgba(255,45,85,0.4)",
+                    "&:hover": {
+                      opacity: 0.9,
+                    },
                   }}
                 >
                   Continue
@@ -827,54 +966,6 @@ export default function SelfieVerification({ params }: { params: Params }) {
           </Paper>
         </Box>
       </Box>
-
-      <Dialog
-        open={dialogOpen}
-        fullWidth
-        maxWidth="xs"
-        onClose={() => setDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            background: "rgba(20, 10, 30, 0.95)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 3,
-          },
-        }}
-      >
-        <DialogContent sx={{ textAlign: "center", pt: 4 }}>
-          {dialogType === "success" ? (
-            <CheckCircleIcon sx={{ fontSize: 70, color: "#00D179", mb: 2 }} />
-          ) : (
-            <ErrorOutlineIcon sx={{ fontSize: 70, color: "#FF2D55", mb: 2 }} />
-          )}
-          <Typography variant="h6" fontWeight={700} color="#fff" mb={1}>
-            {dialogType === "success" ? "Success!" : "Verification Failed"}
-          </Typography>
-          <Typography color="rgba(255,255,255,0.7)">{dialogMessage}</Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-            fullWidth
-            variant={dialogType === "success" ? "contained" : "outlined"}
-            onClick={() => {
-              setDialogOpen(false);
-              if (dialogType === "success") {
-                router.push(`/bannerupload/${userId}`);
-              }
-            }}
-            sx={{
-              py: 1.5,
-              borderRadius: 3,
-              ...(dialogType === "success" && {
-                background: "linear-gradient(45deg, #00D179, #00A3FF)",
-              }),
-            }}
-          >
-            {dialogType === "success" ? "Continue" : "Close"}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </ThemeProvider>
   );
 }

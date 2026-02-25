@@ -48,7 +48,9 @@ body {
 *::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #ff4d8d, #c2185b);
   border-radius: 10px;
-  transition: background 0.3s ease, opacity 0.3s ease;
+  transition:
+    background 0.3s ease,
+    opacity 0.3s ease;
 }
 
 *::-webkit-scrollbar-thumb:hover {
@@ -172,7 +174,8 @@ label {
 .profile-gradient-bg {
   height: 100%;
   padding: 8px 12px 0 12px;
-  background: linear-gradient(180deg, #141014 0%, #2f1a2a 55%, #3f2438 100%),
+  background:
+    linear-gradient(180deg, #141014 0%, #2f1a2a 55%, #3f2438 100%),
     linear-gradient(
       180deg,
       rgba(110, 45, 89, 0.12) 65%,
@@ -183,12 +186,28 @@ label {
 .profile-gradient-bg-2 {
   height: 100%;
   padding: 12px 12px 0 12px;
-  background: radial-gradient(
+  background:
+    radial-gradient(
       circle at top left,
       rgba(0, 0, 0, 0.55) 0%,
       rgba(0, 0, 0, 0.25) 35%,
       rgba(0, 0, 0, 0) 65%
     ),
-    linear-gradient(180deg, rgba(110, 45, 89, 0.2) 0%, rgba(110, 45, 89, 0) 40%),
+    linear-gradient(
+      180deg,
+      rgba(110, 45, 89, 0.2) 0%,
+      rgba(110, 45, 89, 0) 40%
+    ),
     linear-gradient(180deg, #5a2a48 0%, #3b1c34 52%, #0b0609 100%);
+}
+
+.react-tel-input .country-list .search-box {
+  background-color: #c8c8c8 !important;
+  color: #000 !important;
+  width: 265px !important;
+  padding: 5px 10px !important;
+}
+
+.react-tel-input .country-list .search-box::placeholder{
+  color: #3a3a3a !important;
 }

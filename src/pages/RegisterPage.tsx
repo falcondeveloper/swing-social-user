@@ -860,6 +860,10 @@ const RegisterPage = () => {
                 >
                   <PhoneInput
                     country={"us"}
+                    enableSearch={true}
+                    searchPlaceholder="Search country..."
+                    searchClass="country-search-input"
+                    dropdownClass="country-dropdown"
                     value={formik.values.countryCode + formik.values.phone}
                     onChange={(value, country) => {
                       const c = country as CountryData;
@@ -867,7 +871,6 @@ const RegisterPage = () => {
                       const numberWithoutCode = value.replace(c.dialCode, "");
                       formik.setFieldValue("phone", numberWithoutCode);
                     }}
-                    onBlur={formik.handleBlur}
                     inputProps={{
                       name: "phone",
                       required: true,
