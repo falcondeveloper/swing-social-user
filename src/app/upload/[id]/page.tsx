@@ -325,6 +325,8 @@ export default function UploadAvatar({ params }: { params: Params }) {
     },
   });
 
+  console.log("Rendered UploadAvatar with userId:", userId);
+
   return (
     <>
       <ThemeProvider theme={theme}>
