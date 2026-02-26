@@ -129,7 +129,11 @@ export default function Otp({
   }, [phone]);
 
   useEffect(() => {
-    setPhone(localStorage.getItem("phone"));
+    const storedPhone = localStorage.getItem("phone");
+
+    if (storedPhone) {
+      setPhone(storedPhone);
+    }
     setId(localStorage.getItem("logged_in_profile") || idEmail);
   }, [idEmail, countryCode]);
 
@@ -202,18 +206,27 @@ export default function Otp({
     }
   };
 
-  const handleVerificationPhone = async (phone: string) => {
+  const handleVerificationPhone = async (mobile: string) => {
+    if (!mobile) {
+      toast.error("Phone number not found. Please try again.");
+      return;
+    }
+
     try {
       const res = await fetch("/api/user/otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, countryCode }),
+        body: JSON.stringify({
+          phone: mobile,
+          countryCode: countryCode,
+        }),
       });
+
       if (!res.ok) throw new Error("Failed to send OTP");
+
       const data = await res.json();
-      setResendTimer(90);
+      setResendTimer(65);
       setOtpData(data?.data);
-      console.log(data?.data);
     } catch (error) {
       console.error("Error:", error);
     }
@@ -436,8 +449,16 @@ export default function Otp({
                         variant="text"
                         startIcon={<RefreshIcon fontSize="small" />}
                         onClick={() => {
+                          const storedPhone =
+                            phone || localStorage.getItem("phone");
+
+                          if (!storedPhone) {
+                            toast.error("Phone number missing.");
+                            return;
+                          }
+
                           toast.success("Code is resent");
-                          handleVerificationPhone(phone ?? "");
+                          handleVerificationPhone(storedPhone);
                         }}
                         disabled={resendTimer > 0}
                         sx={{
