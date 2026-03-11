@@ -7,15 +7,11 @@ import {
   Button,
   Typography,
   Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   CircularProgress,
-  Grid,
 } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Password } from "@mui/icons-material";
-import Swal from "sweetalert2";
+import CustomDialog from "@/components/CustomDialog";
 
 const OtpLoginContent = () => {
   const router = useRouter();
@@ -26,29 +22,27 @@ const OtpLoginContent = () => {
   const [dialogMessage, setDialogMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [otp, setOtp] = useState<string[]>(["", "", "", ""]);
-  const [vcode, setCode] = useState<any>("");
+  const [storedCode, setStoredCode] = useState("");
+  const [dialogAction, setDialogAction] = useState<
+    "login" | "signup" | "success" | null
+  >(null);
 
   useEffect(() => {
     const emailParam = searchParams?.get("email") ?? "";
-    if (emailParam) {
-      setEmail(emailParam);
-    }
+    if (emailParam) setEmail(emailParam);
 
     const savedOtp = sessionStorage.getItem("loginOtp") || "";
-    setCode(savedOtp);
+    setStoredCode(savedOtp);
   }, [searchParams]);
 
   const handleOtpChange = (value: string, index: number) => {
-    setOtp((prevOtp) => {
-      const newOtp = [...prevOtp];
-      newOtp[index] = value.slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
 
-      return newOtp;
-    });
-
-    if (value && index < otp.length - 1) {
+    if (value && index < 3) {
       const nextInput = document.getElementById(
-        `otp-${index + 1}`
+        `otp-${index + 1}`,
       ) as HTMLInputElement;
       nextInput?.focus();
     }
@@ -56,19 +50,20 @@ const OtpLoginContent = () => {
 
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
-    index: number
+    index: number,
   ) => {
     if (event.key === "Backspace" && !otp[index] && index > 0) {
       const prevInput = document.getElementById(
-        `otp-${index - 1}`
+        `otp-${index - 1}`,
       ) as HTMLInputElement;
       prevInput?.focus();
     }
   };
 
-  const checkEmailAndLogin = async (email: string) => {
+  const checkEmailAndLogin = async () => {
     try {
       setLoading(true);
+
       const res = await fetch("/api/user/loginWithOutPassword", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,14 +79,22 @@ const OtpLoginContent = () => {
         localStorage.setItem("profileUsername", data.currentuserName);
         localStorage.setItem("memberalarm", data.memberAlarm);
         localStorage.setItem("memberShip", data.memberShip);
+
         router.push("/home");
       } else {
-        console.error(data.message);
-        setDialogMessage(data.message);
+        const message = data.message || "Login failed.";
+
+        setDialogMessage(message);
+
+        if (message.toLowerCase().includes("no registered")) {
+          setDialogAction("signup");
+        } else {
+          setDialogAction("login");
+        }
+
         setDialogOpen(true);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setDialogMessage("Something went wrong. Please try again.");
       setDialogOpen(true);
     } finally {
@@ -99,55 +102,59 @@ const OtpLoginContent = () => {
     }
   };
 
-  const handleContinue = (currentOtp: string[]) => {
-    setLoading(true);
-
-    const enteredCode = currentOtp.join("");
-    const storedCode = vcode.toString();
+  const handleContinue = () => {
+    const enteredCode = otp.join("");
 
     if (enteredCode === storedCode) {
-      Swal.fire({
-        title: "✅ OTP Verified!",
-        text: "You have successfully logged in.",
-        icon: "success",
-        confirmButtonText: "Continue",
-        allowOutsideClick: false,
-      }).then(() => {
-        checkEmailAndLogin(email);
-      });
+      setDialogMessage("OTP Verified! You have successfully logged in.");
+      setDialogAction("success");
+      setDialogOpen(true);
     } else {
-      console.log("Verification code is incorrect");
       setDialogMessage("The OTP you entered is incorrect. Please try again.");
       setDialogOpen(true);
-      setLoading(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        background:
+          "radial-gradient(circle at top left, #1A0B2E 0%, #000000 100%)",
+      }}
+    >
+      <Container maxWidth="sm">
         <Paper
-          elevation={3}
+          elevation={24}
           sx={{
-            p: 4,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            width: "100%",
-            background: "white",
-            borderRadius: 2,
+            p: { xs: 3, sm: 4 },
+            borderRadius: "20px",
+            background: "rgba(255,255,255,0.05)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            textAlign: "center",
+            color: "#fff",
           }}
         >
           <Password sx={{ fontSize: 48, color: "#FF2D55", mb: 2 }} />
-          <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
-            Login with Email OTP
+
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              background: "linear-gradient(45deg,#FF2D55,#7000FF)",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+              mb: 2,
+            }}
+          >
+            Verify Email OTP
+          </Typography>
+
+          <Typography sx={{ mb: 3, color: "rgba(255,255,255,0.7)" }}>
+            Enter the 4-digit code sent to your email
           </Typography>
 
           <TextField
@@ -156,88 +163,110 @@ const OtpLoginContent = () => {
             value={email}
             disabled
             sx={{
-              mb: 2,
-              "& .MuiInputLabel-root": { color: "black !important" },
-              "& .MuiOutlinedInput-root": { color: "black" },
+              mb: 3,
+              "& .MuiOutlinedInput-root": {
+                color: "#fff",
+                backgroundColor: "rgba(255,255,255,0.05)",
+                borderRadius: "12px",
+                "& fieldset": {
+                  borderColor: "rgba(255,255,255,0.2)",
+                },
+              },
+              "& .MuiInputLabel-root": {
+                color: "rgba(255,255,255,0.6)",
+              },
             }}
           />
 
-          <Grid item xs={12} sx={{ textAlign: "center" }}>
-            <Typography
-              variant="subtitle1"
-              sx={{ mb: 1, color: "text.secondary" }}
-            >
-              Enter the 4-digit code sent to your email
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 2,
-                mb: 4,
-              }}
-            >
-              {otp.map((digit, index) => (
-                <TextField
-                  key={index}
-                  id={`otp-${index}`}
-                  value={digit}
-                  onChange={(e: any) => handleOtpChange(e.target.value, index)}
-                  onKeyDown={(e: any) => handleKeyDown(e, index)}
-                  inputProps={{
-                    maxLength: 1,
-                    style: {
-                      textAlign: "center",
-                      fontSize: "1.5rem",
-                      padding: "10px",
-                      color: "black",
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 2,
+              mb: 4,
+            }}
+          >
+            {otp.map((digit, index) => (
+              <TextField
+                key={index}
+                id={`otp-${index}`}
+                value={digit}
+                onChange={(e: any) => handleOtpChange(e.target.value, index)}
+                onKeyDown={(e: any) => handleKeyDown(e, index)}
+                inputProps={{ maxLength: 1 }}
+                sx={{
+                  width: "55px",
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    borderRadius: "12px",
+                    "& fieldset": {
+                      borderColor: "rgba(255,255,255,0.2)",
                     },
-                  }}
-                  sx={{
-                    width: "50px",
-                    height: "50px",
-                    borderRadius: "8px",
-                    "& .MuiInputBase-input": {
-                      padding: "0",
+                    "&:hover fieldset": {
+                      borderColor: "#FF2D55",
                     },
-                  }}
-                />
-              ))}
-            </Box>
-          </Grid>
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#7000FF",
+                    },
+                  },
+                  "& input": {
+                    textAlign: "center",
+                    fontSize: "1.6rem",
+                    color: "#fff",
+                  },
+                }}
+              />
+            ))}
+          </Box>
 
           <Button
             fullWidth
-            variant="contained"
-            onClick={() => handleContinue(otp)}
+            onClick={handleContinue}
             disabled={loading}
             sx={{
-              background: "linear-gradient(45deg, #FF2D55, #7000FF)",
               py: 1.5,
-              color: "white",
-              "&:hover": {
-                background: "linear-gradient(45deg, #FF2D55, #7000FF)",
-                opacity: 0.9,
-              },
+              borderRadius: "12px",
+              fontWeight: 600,
+              color: "#fff",
+              background: "linear-gradient(45deg,#FF2D55,#7000FF)",
             }}
           >
             {loading ? (
-              <CircularProgress size={24} sx={{ color: "white" }} />
+              <CircularProgress size={24} sx={{ color: "#fff" }} />
             ) : (
-              "Login"
+              "LOGIN"
             )}
           </Button>
         </Paper>
-      </Box>
+      </Container>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
-        <DialogTitle>Login Failed</DialogTitle>
-        <DialogContent>
-          <Typography>{dialogMessage}</Typography>
-        </DialogContent>
-      </Dialog>
-    </Container>
+      {/* Custom Dialog */}
+      <CustomDialog
+        open={dialogOpen}
+        title="Verification Status"
+        description={dialogMessage}
+        confirmText={
+          dialogAction === "signup"
+            ? "SIGN UP"
+            : dialogAction === "success"
+              ? "CONTINUE"
+              : "OK"
+        }
+        cancelText="CLOSE"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={() => {
+          setDialogOpen(false);
+
+          if (dialogAction === "success") {
+            checkEmailAndLogin();
+          }
+
+          if (dialogAction === "signup") {
+            router.push("/register");
+          }
+        }}
+      />
+    </Box>
   );
 };
 
@@ -245,16 +274,17 @@ const EmailOtpLogin = () => {
   return (
     <Suspense
       fallback={
-        <Container
+        <Box
           sx={{
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             height: "100vh",
+            background: "#000",
           }}
         >
           <CircularProgress />
-        </Container>
+        </Box>
       }
     >
       <OtpLoginContent />

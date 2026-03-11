@@ -208,6 +208,34 @@ label {
   padding: 5px 10px !important;
 }
 
-.react-tel-input .country-list .search-box::placeholder{
+.react-tel-input .country-list .search-box::placeholder {
   color: #3a3a3a !important;
+}
+
+@keyframes float0 {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+@keyframes float1 {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes float2 {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
 }

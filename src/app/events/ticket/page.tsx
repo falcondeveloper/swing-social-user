@@ -16,11 +16,11 @@ import {
   Dialog,
   CircularProgress,
 } from "@mui/material";
-import Swal from "sweetalert2";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import { ToastContainer } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import CustomDialog from "@/components/CustomDialog";
 
 const theme = createTheme({
   palette: {
@@ -72,6 +72,24 @@ const BillingUpgrade: any = () => {
   const [eventVenue, setEventVenue] = useState<string>("");
   const [eventEmailDescription, setEventEmailDescription] =
     useState<string>("");
+  // Global Result Dialog State
+  const [resultOpen, setResultOpen] = useState(false);
+  const [resultTitle, setResultTitle] = useState("");
+  const [resultMessage, setResultMessage] = useState("");
+  const [resultType, setResultType] = useState<
+    "success" | "error" | "editCard" | null
+  >(null);
+
+  const showResultDialog = (
+    title: string,
+    message: string,
+    type: typeof resultType = null,
+  ) => {
+    setResultTitle(title);
+    setResultMessage(message);
+    setResultType(type);
+    setResultOpen(true);
+  };
 
   const handleTicketEmail = async (x: any) => {
     const template = `
@@ -190,7 +208,7 @@ const BillingUpgrade: any = () => {
         if (!response.ok) {
           console.error(
             "Failed to fetch advertiser data:",
-            response.statusText
+            response.statusText,
           );
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -214,7 +232,7 @@ const BillingUpgrade: any = () => {
     if (value.length > 6) {
       value = `(${value.substring(0, 3)}) ${value.substring(
         3,
-        6
+        6,
       )}-${value.substring(6)}`;
     } else if (value.length > 3) {
       value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
@@ -405,7 +423,7 @@ const BillingUpgrade: any = () => {
               profileId: profileId,
               payload: ticketDetailsArray,
             }),
-          }
+          },
         );
         const status = await addAttendeeStatusResponse.json();
         if (status.message === "0") {
@@ -447,32 +465,24 @@ const BillingUpgrade: any = () => {
                     profileId: profileId,
                     payload: ticketDetailsArray,
                   }),
-                }
+                },
               );
 
               if (addAttendeeResponse.ok) {
-                Swal.fire({
-                  title: `🎉 Thank you, ${userName}!`,
-                  html: `
-                        <p>You have purchased ticket successfully!</p>
-                        <p><strong>Event:</strong> ${localStorage.getItem(
-                          "event_name"
-                        )}</p>
-                        <p><strong>Ticket Type:</strong> ${localStorage.getItem(
-                          "ticketType"
-                        )}</p>
-                        <p><strong>Quantity:</strong> ${localStorage.getItem(
-                          "ticketQuantity"
-                        )}</p>
-                        <p><strong>Total Price:</strong> $${localStorage.getItem(
-                          "ticketPrice"
-                        )}</p>
-                        <hr/>
-                        <p>📩 We've sent the full event details to your email. Please check your inbox!</p>
-                        `,
-                  icon: "success",
-                  confirmButtonText: "OK",
-                });
+                showResultDialog(
+                  `🎉 Thank you, ${userName}!`,
+                  `
+You have purchased ticket successfully!
+
+Event: ${localStorage.getItem("event_name")}
+Ticket Type: ${localStorage.getItem("ticketType")}
+Quantity: ${localStorage.getItem("ticketQuantity")}
+Total Price: $${localStorage.getItem("ticketPrice")}
+
+We've sent the full event details to your email.
+`,
+                  "success",
+                );
 
                 await fetch("/api/user/events/ticket/send-ticket-email", {
                   method: "POST",
@@ -525,30 +535,28 @@ const BillingUpgrade: any = () => {
               await handleTicketEmail("2");
               setOpen(false);
 
-              Swal.fire({
-                title: `Failed`,
-                text: `We're sorry, the card card has been declined, Ticket(s) not purchased.`,
-                icon: "error",
-                confirmButtonText: "Edit the card",
-              });
+              showResultDialog(
+                "Payment Failed",
+                "We're sorry, your card has been declined. Ticket(s) not purchased.",
+                "error",
+              );
             }
           } else {
             await handleTicketEmail("2");
             setOpen(false);
-            Swal.fire({
-              title: `Failed`,
-              text: `We're sorry, the card card has been declined, Ticket(s) not purchased.`,
-              icon: "error",
-              confirmButtonText: "Edit the card",
-            });
+            showResultDialog(
+              "Payment Failed",
+              "We're sorry, your card has been declined. Ticket(s) not purchased.",
+              "editCard",
+            );
           }
         } else {
           setOpen(false);
-          Swal.fire({
-            title: `Failed`,
-            text: `You have already purchased the ticket.`,
-            icon: "error",
-          });
+          showResultDialog(
+            "Purchase Not Allowed",
+            "You have already purchased this ticket.",
+            "error",
+          );
         }
       } catch (error) {
         console.error("Error submitting form:", error);
@@ -965,6 +973,25 @@ const BillingUpgrade: any = () => {
       </Dialog>
 
       <ToastContainer position="top-right" autoClose={3000} />
+      <CustomDialog
+        open={resultOpen}
+        title={resultTitle}
+        description={resultMessage}
+        confirmText={resultType === "editCard" ? "Edit the Card" : "OK"}
+        cancelText="Close"
+        onClose={() => setResultOpen(false)}
+        onConfirm={() => {
+          setResultOpen(false);
+
+          if (resultType === "success") {
+            router.push("/events");
+          }
+
+          if (resultType === "editCard") {
+            setOpen(true); // Reopen payment modal
+          }
+        }}
+      />
     </ThemeProvider>
   );
 };

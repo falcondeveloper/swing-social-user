@@ -31,7 +31,6 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import Snackbar, { SnackbarCloseReason } from "@mui/material/Snackbar";
-import Swal from "sweetalert2";
 import Link from "next/link";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -41,6 +40,7 @@ import { jwtDecode } from "jwt-decode";
 import { PushNotificationsContext } from "@/components/PushNotificationsProvider";
 import { getToken } from "firebase/messaging";
 import { DeviceTypes, isPWA, useDevice } from "@/utils/useDevice";
+import CustomDialog from "@/components/CustomDialog";
 
 const theme = createTheme({
   palette: {
@@ -182,10 +182,16 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"email" | "phone">("email");
   const [loginMethod, setLoginMethod] = useState<"password" | "otp">(
-    "password"
+    "password",
   );
   const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState({ open: false, message: "" });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState({
+    title: "",
+    description: "",
+    onConfirm: undefined as (() => void) | undefined,
+  });
 
   useEffect(() => {
     const id = localStorage.getItem("logged_in_profile");
@@ -205,7 +211,7 @@ const LoginPage = () => {
     (async () => {
       try {
         const ipData = await fetch("https://ipapi.co/json").then((r) =>
-          r.json()
+          r.json(),
         );
         await fetch("/api/user/tracking", {
           method: "POST",
@@ -244,14 +250,14 @@ const LoginPage = () => {
                 .transform((val) => normalize(val))
                 .required("Email, phone or username is required")
             : mode === "email"
-            ? Yup.string()
-                .transform((val) => normalize(val))
-                .required("Email is required")
-                .email("Enter a valid email")
-            : Yup.string().when("phone", {
-                is: (val: string) => !val || val.trim() === "",
-                then: () => Yup.string().required("Phone number is required"),
-              }),
+              ? Yup.string()
+                  .transform((val) => normalize(val))
+                  .required("Email is required")
+                  .email("Enter a valid email")
+              : Yup.string().when("phone", {
+                  is: (val: string) => !val || val.trim() === "",
+                  then: () => Yup.string().required("Phone number is required"),
+                }),
         phone:
           loginMethod === "otp" && mode === "phone"
             ? Yup.string()
@@ -263,7 +269,7 @@ const LoginPage = () => {
             ? Yup.string().required("Please enter a password")
             : Yup.string().notRequired(),
       }),
-    [loginMethod, mode]
+    [loginMethod, mode],
   );
 
   useEffect(() => {
@@ -281,7 +287,7 @@ const LoginPage = () => {
     try {
       if (device === DeviceTypes.IOS && !isPWA()) {
         throw new Error(
-          'On iPhone, please install the app using "Add to Home Screen"'
+          'On iPhone, please install the app using "Add to Home Screen"',
         );
       }
 
@@ -301,7 +307,7 @@ const LoginPage = () => {
       if (!registration) {
         registration = await navigator.serviceWorker.register(
           "/firebase-messaging-sw.js",
-          { scope: "/" }
+          { scope: "/" },
         );
       }
 
@@ -393,17 +399,22 @@ const LoginPage = () => {
             });
             return;
           } else {
-            await Swal.fire({
+            setDialogConfig({
               title: "Login Code Sent!",
-              text: "We’ve emailed you a 4-digit login code. Enter this to continue.",
-              icon: "success",
-              confirmButtonText: "OK",
+              description:
+                "We’ve emailed you a 4-digit login code. Enter this to continue.",
+              onConfirm: () => {
+                sessionStorage.setItem("loginOtp", String(code));
+                router.push(
+                  `/verify-code?email=${encodeURIComponent(values.email.trim())}`,
+                );
+                setLoginMethod("password");
+                setDialogOpen(false);
+              },
             });
-            sessionStorage.setItem("loginOtp", String(code));
-            router.push(
-              `/verify-code?email=${encodeURIComponent(values.email.trim())}`
-            );
-            setLoginMethod("password");
+
+            setDialogOpen(true);
+            return;
           }
         } else if (mode === "phone") {
           // 🔑 Phone login (OTP)
@@ -420,13 +431,18 @@ const LoginPage = () => {
           const data = await res.json();
 
           if (data.status === 200) {
-            await Swal.fire({
+            setDialogConfig({
               title: "Login Code Sent!",
-              text: "We’ve sent a 4-digit login code to your phone. Enter this to continue.",
-              icon: "success",
-              confirmButtonText: "OK",
+              description:
+                "We’ve sent a 4-digit login code to your phone. Enter this to continue.",
+              onConfirm: () => {
+                router.push(`/otp-login/${values.phone}/${cleanedCode}`);
+                setDialogOpen(false);
+              },
             });
-            router.push(`/otp-login/${values.phone}/${cleanedCode}`);
+
+            setDialogOpen(true);
+            return;
           } else {
             console.error(data.message);
 
@@ -450,7 +466,7 @@ const LoginPage = () => {
 
   const handleClose = (
     _: React.SyntheticEvent | Event,
-    reason?: SnackbarCloseReason
+    reason?: SnackbarCloseReason,
   ) => {
     if (reason === "clickaway") return;
     setSnack((s) => ({ ...s, open: false }));
@@ -573,6 +589,10 @@ const LoginPage = () => {
                         <PhoneInput
                           country={"us"}
                           specialLabel=""
+                          enableSearch={true}
+                          searchPlaceholder="Search country..."
+                          searchClass="country-search-input"
+                          dropdownClass="country-dropdown"
                           value={
                             formik.values.countryCode + formik.values.phone
                           }
@@ -580,11 +600,11 @@ const LoginPage = () => {
                             const c = country as CountryData;
                             formik.setFieldValue(
                               "countryCode",
-                              `+${c.dialCode}`
+                              `+${c.dialCode}`,
                             );
                             const numberWithoutCode = value.replace(
                               c.dialCode,
-                              ""
+                              "",
                             );
                             formik.setFieldValue("phone", numberWithoutCode);
                           }}
@@ -862,6 +882,16 @@ const LoginPage = () => {
           {snack.message}
         </Alert>
       </Snackbar>
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        confirmText="OK"
+        cancelText="Cancel"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={dialogConfig.onConfirm}
+      />
     </ThemeProvider>
   );
 };

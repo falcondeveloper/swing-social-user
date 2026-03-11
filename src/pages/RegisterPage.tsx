@@ -211,6 +211,19 @@ const ParticleField = memo(() => {
   );
 });
 
+type RegisterFormValues = {
+  userName: string;
+  email: string;
+  phone: string;
+  countryCode: string;
+  password: string;
+  repeatPassword: string;
+  city: string;
+  user_name: string;
+  consent: boolean;
+  referral_code: string;
+};
+
 const RegisterPage = () => {
   const router = useRouter();
   const emailRef = useRef<HTMLInputElement | null>(null);
@@ -318,8 +331,19 @@ const RegisterPage = () => {
     ),
   });
 
-  const formik = useFormik({
-    initialValues: {
+  const savedDraft = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return JSON.parse(localStorage.getItem("register_step1") || "null");
+  }, []);
+
+  useEffect(() => {
+    if (savedDraft?.city) {
+      setCityInput(savedDraft.city);
+    }
+  }, [savedDraft]);
+
+  const formik = useFormik<RegisterFormValues>({
+    initialValues: savedDraft || {
       userName: "",
       email: "",
       phone: "",
@@ -333,126 +357,85 @@ const RegisterPage = () => {
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting, setErrors }) => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const src = urlParams.get("refer");
-      const aff = urlParams.get("aff");
-
-      const getOS = () => {
-        const userAgent = window.navigator.userAgent;
-        if (userAgent.includes("Win")) return "Windows";
-        if (userAgent.includes("Mac")) return "MacOS";
-        if (userAgent.includes("Linux")) return "Linux";
-        if (userAgent.includes("Android")) return "Android";
-        if (userAgent.includes("iPhone") || userAgent.includes("iPad"))
-          return "iOS";
-        return "Unknown";
-      };
-
       try {
         setIsUploading(true);
+        const savedProfileId = localStorage.getItem("register_profile_id");
 
-        // 👇 Create safe timeout wrapper for fetch
-        const fetchWithTimeout = async (url: string, ms = 3000) => {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), ms);
-          try {
-            const res = await fetch(url, { signal: controller.signal });
-            clearTimeout(timeout);
-            return res;
-          } catch {
-            clearTimeout(timeout);
-            return null; // fail silently
-          }
+        const urlParams = new URLSearchParams(window.location.search);
+        const src = urlParams.get("refer");
+        const aff = urlParams.get("aff");
+
+        const getOS = () => {
+          const userAgent = window.navigator.userAgent;
+          if (userAgent.includes("Win")) return "Windows";
+          if (userAgent.includes("Mac")) return "MacOS";
+          if (userAgent.includes("Linux")) return "Linux";
+          if (userAgent.includes("Android")) return "Android";
+          if (userAgent.includes("iPhone") || userAgent.includes("iPad"))
+            return "iOS";
+          return "Unknown";
         };
 
-        // 👇 Try to get IP info, but skip on failure
-        let ipData: any = null;
-        const ipRes = await fetchWithTimeout("https://ipapi.co/json", 3000);
-        if (ipRes && ipRes.ok) {
-          try {
-            ipData = await ipRes.json();
-          } catch {
-            console.warn("⚠️ Invalid IPAPI response JSON");
-          }
-        } else {
-          console.warn("⚠️ Skipping IPAPI (network error or timeout)");
-        }
+        // 🔹 Track hit
+        const hitRes = await fetch("/api/user/tracking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            affiliate: aff,
+            referral: src,
+            OS: getOS(),
+            page: "Register",
+            url: window.location.href,
+            userid: null,
+          }),
+        });
 
-        // 👇 Continue regardless of ipapi result
-        const hitData = await (
-          await fetch("/api/user/tracking", {
-            method: "POST",
+        const hitData = await hitRes.json();
+        const hitId = hitData?.data?.HitId || null;
+
+        // 🔹 Username check
+        // const usernameCheck = await fetch("/api/user/screenname/check", {
+        //   method: "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify({ search: values.user_name.trim() }),
+        // }).then((res) => res.json());
+
+        // if (usernameCheck.exists) {
+        //   setErrors({ user_name: "Username already taken" });
+        //   setSubmitting(false);
+        //   setIsUploading(false);
+        //   return;
+        // }
+
+        // 🔹 Email check
+        // const emailCheck = await fetch("/api/user/profile/check", {
+        //   method: "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify({ search: values.email.trim() }),
+        // }).then((res) => res.json());
+
+        // if (emailCheck.exists) {
+        //   setErrors({ email: "Email already taken" });
+        //   setSubmitting(false);
+        //   setIsUploading(false);
+        //   return;
+        // }
+
+        let profileIdToUse: string | null = savedProfileId || null;
+
+        if (profileIdToUse) {
+          await fetch("/api/user/update-register", {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              profileIdToUse: profileIdToUse,
+              ...values,
               affiliate: aff,
-              referral: src,
-              OS: getOS(),
-              page: "Register",
-              url: window.location.href,
-              userid: null,
-              ip: ipData?.ip || null,
-              city: ipData?.city || null,
-              region: ipData?.region || null,
-              country_name: ipData?.country_name || null,
+              hitid: hitId,
             }),
-          })
-        ).json();
-
-        const hitId = hitData?.data?.HitId;
-
-        // Username check
-        const usernameCheck = await (
-          await fetch("/api/user/screenname/check", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ search: values.user_name.trim() }),
-          })
-        ).json();
-
-        if (usernameCheck.exists) {
-          setErrors({ user_name: "Username already taken" });
-          formik.setTouched({ ...formik.touched, user_name: true }, false);
-          requestAnimationFrame(() => {
-            userNameRef.current?.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-            setTimeout(
-              () => userNameRef.current?.focus({ preventScroll: true }),
-              250,
-            );
           });
-          return setSubmitting(false);
-        }
-
-        // Email check
-        const emailCheck = await (
-          await fetch("/api/user/profile/check", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ search: values.email.trim() }),
-          })
-        ).json();
-
-        if (emailCheck.exists) {
-          setErrors({ email: "Email already taken" });
-          formik.setTouched({ ...formik.touched, email: true }, false);
-          requestAnimationFrame(() => {
-            emailRef.current?.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-            setTimeout(
-              () => emailRef.current?.focus({ preventScroll: true }),
-              250,
-            );
-          });
-          return setSubmitting(false);
-        }
-
-        // Register user
-        const data = await (
-          await fetch("/api/user", {
+        } else {
+          const createRes = await fetch("/api/user", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -461,44 +444,61 @@ const RegisterPage = () => {
               affiliate: aff,
               hitid: hitId,
             }),
-          })
-        ).json();
+          });
 
-        if (data.profileId) {
-          localStorage.setItem("email", values.email);
-          localStorage.setItem("userName", values.userName);
-          localStorage.setItem("password", values.password);
-          localStorage.setItem("logged_in_profile", data.profileId);
-          localStorage.setItem("userName", values.user_name);
-          localStorage.setItem("phone", values.phone);
+          const createData = await createRes.json();
 
-          // try {
-          //   if (fcmToken) {
-          //     await fetch("/api/user/notification-token", {
-          //       method: "POST",
-          //       headers: { "Content-Type": "application/json" },
-          //       body: JSON.stringify({
-          //         profileId: data.profileId,
-          //         token: fcmToken,
-          //       }),
-          //     });
-          //   }
-          // } catch (err) {
-          //   console.warn("Notification token save failed:", err);
-          // }
+          if (!createData?.profileId) {
+            throw new Error("Profile creation failed");
+          }
 
-          setProfileId(data.profileId);
-          setIsUploading(false);
-          handleOpen();
+          const newProfileId: string | undefined = createData?.profileId;
+
+          if (!newProfileId) {
+            throw new Error("Profile creation failed");
+          }
+
+          profileIdToUse = newProfileId;
+
+          localStorage.setItem("register_profile_id", newProfileId);
         }
-      } catch (err) {
-        console.error("❌ Registration failed:", err);
+
+        if (profileIdToUse) {
+          localStorage.setItem("email", values.email);
+          localStorage.setItem("userName", values.user_name);
+          localStorage.setItem("password", values.password);
+          localStorage.setItem("phone", values.phone);
+          localStorage.setItem("logged_in_profile", profileIdToUse);
+
+          setProfileId(profileIdToUse);
+
+          const verifyRes = await fetch("/api/user/mark-otp-verified", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId: profileIdToUse }),
+          });
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.emailVerified === 1) {
+            router.push(`/intrested/${profileIdToUse}`);
+          } else {
+            handleOpen();
+          }
+        }
+      } catch (error) {
+        console.error("❌ Registration failed:", error);
         alert("Something went wrong!");
       } finally {
         setIsUploading(false);
+        setSubmitting(false);
       }
     },
   });
+
+  const formikValuesStr = JSON.stringify(formik.values);
+  useEffect(() => {
+    localStorage.setItem("register_step1", formikValuesStr);
+  }, [formikValuesStr]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -508,7 +508,8 @@ const RegisterPage = () => {
 
   const handleContinue = async () => {
     const countryCode = formik.values.countryCode.replace("+", "");
-    await router.push(`/otp/${profileId}/${countryCode}`);
+    const storedProfileId = localStorage.getItem("register_profile_id");
+    await router.push(`/otp/${storedProfileId}/${countryCode}`);
     handleClose();
   };
 
@@ -555,48 +556,47 @@ const RegisterPage = () => {
                 background: "rgba(255, 255, 255, 0.05)",
                 backdropFilter: "blur(20px)",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
-                overflow: "hidden",
+                overflow: "visible",
               }}
             >
-              <Stepper
-                activeStep={0}
-                alternativeLabel
-                sx={{
-                  background: "transparent",
-                  width: "100%",
-                  margin: "0 auto 16px auto",
-                }}
-              >
-                {[
-                  "Profile Info",
-                  "Verify Phone",
-                  "Preferences",
-                  "Avatar & Banner",
-                  "About",
-                ].map((label) => (
-                  <Step key={label}>
-                    <StepLabel
-                      sx={{
-                        "& .MuiStepLabel-label": {
-                          color: "#fff !important",
-                          fontSize: { xs: "0.7rem", sm: "0.85rem" },
-                        },
-                        "& .MuiStepIcon-root": {
-                          color: "rgba(255,255,255,0.3)",
-                        },
-                        "& .MuiStepIcon-root.Mui-active": {
-                          color: "#c2185b",
-                        },
-                        "& .MuiStepIcon-root.Mui-completed": {
-                          color: "#c2185b",
-                        },
-                      }}
-                    >
-                      {/* {label} */}
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
+              {/* <Stepper
+                  activeStep={0}
+                  alternativeLabel
+                  sx={{
+                    background: "transparent",
+                    width: "100%",
+                    margin: "0 auto 16px auto",
+                  }}
+                >
+                  {[
+                    "Profile Info",
+                    "Verify Phone",
+                    "Preferences",
+                    "Avatar & Banner",
+                    "About",
+                  ].map((label) => (
+                    <Step key={label}>
+                      <StepLabel
+                        sx={{
+                          "& .MuiStepLabel-label": {
+                            color: "#fff !important",
+                            fontSize: { xs: "0.7rem", sm: "0.85rem" },
+                          },
+                          "& .MuiStepIcon-root": {
+                            color: "rgba(255,255,255,0.3)",
+                          },
+                          "& .MuiStepIcon-root.Mui-active": {
+                            color: "#c2185b",
+                          },
+                          "& .MuiStepIcon-root.Mui-completed": {
+                            color: "#c2185b",
+                          },
+                        }}
+                      >
+                      </StepLabel>
+                    </Step>
+                  ))}
+                </Stepper> */}
 
               <Box sx={{ mb: 2, textAlign: "center" }}>
                 <Box sx={{ mb: 2 }}>

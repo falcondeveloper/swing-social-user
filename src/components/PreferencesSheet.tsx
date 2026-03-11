@@ -52,12 +52,14 @@ const yourTextFieldSx = {
   mb: 2,
   "& .MuiOutlinedInput-root": {
     color: "white",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: "12px",
-    "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-    "&:hover fieldset": { borderColor: "rgba(255,255,255,0.4)" },
+    "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+    "&:hover fieldset": { borderColor: "rgba(255,45,85,0.5)" },
+    "&.Mui-focused fieldset": { borderColor: "#FF2D55" },
   },
-  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.7)" },
+  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" },
+  "& .MuiInputLabel-root.Mui-focused": { color: "#FF2D55" },
 } as const;
 
 const validationSchema = Yup.object({
@@ -282,7 +284,14 @@ export default function PreferencesSheet({
           Who should I block when I am swiping?
         </Typography>
 
-        <Box component="fieldset" sx={{ border: "none", m: 0, p: 0 }}>
+        <Box
+          component="fieldset"
+          sx={{
+            border: "none",
+            m: 0,
+            p: 0,
+          }}
+        >
           <Box
             sx={{
               display: "grid",
@@ -297,8 +306,9 @@ export default function PreferencesSheet({
                   display: "flex",
                   alignItems: "center",
                   gap: 1,
-                  bgcolor: "rgba(255,255,255,0.02)",
-                  borderRadius: 1,
+                  bgcolor: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: "12px",
                   p: 1,
                   px: 1.25,
                 }}
@@ -314,8 +324,8 @@ export default function PreferencesSheet({
                   }
                   sx={{
                     "& .MuiSvgIcon-root": { fontSize: 28 },
-                    color: "#e91e63",
-                    "&.Mui-checked": { color: "#e91e63" },
+                    color: "#FF2D55",
+                    "&.Mui-checked": { color: "#FF2D55" },
                   }}
                 />
 
@@ -375,11 +385,12 @@ export default function PreferencesSheet({
           display: "flex",
           alignItems: "center",
           gap: 1,
-          bgcolor: "rgba(255,255,255,0.02)",
-          borderRadius: 1,
+          bgcolor: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: "12px", // ✅ rounder like CustomDialog
           p: 1,
-          px: 1.25,
           mb: 2,
+          px: 1.25,
         }}
       >
         <FormControlLabel
@@ -397,8 +408,8 @@ export default function PreferencesSheet({
               }}
               sx={{
                 "& .MuiSvgIcon-root": { fontSize: 28, marginLeft: "9px" },
-                color: "#e91e63",
-                "&.Mui-checked": { color: "#e91e63" },
+                color: "#FF2D55",
+                "&.Mui-checked": { color: "#FF2D55" },
               }}
             />
           }
@@ -479,8 +490,8 @@ export default function PreferencesSheet({
               onChange={(e) => setNested("distanceChecked", e.target.checked)}
               sx={{
                 "& .MuiSvgIcon-root": { fontSize: 26 },
-                color: "#e91e63",
-                "&.Mui-checked": { color: "#e91e63" },
+                color: "#FF2D55",
+                "&.Mui-checked": { color: "#FF2D55" },
               }}
             />
           }
@@ -513,7 +524,7 @@ export default function PreferencesSheet({
                   { value: 150, label: "150" },
                 ]}
                 sx={{
-                  color: "#e91e63",
+                  color: "#FF2D55",
                   "& .MuiSlider-track": {
                     height: 8,
                     borderRadius: 99,
@@ -545,7 +556,7 @@ export default function PreferencesSheet({
                   },
                   "& .MuiSlider-valueLabel": {
                     // top: -35,
-                    backgroundColor: "#e91e63",
+                    background: "linear-gradient(90deg, #FF2D55, #7000FF)",
                     color: "white",
                     borderRadius: 6,
                     padding: "2px 6px",
@@ -731,8 +742,9 @@ export default function PreferencesSheet({
                   display: "flex",
                   alignItems: "center",
                   gap: 1,
-                  bgcolor: "rgba(255,255,255,0.02)",
-                  borderRadius: 1,
+                  bgcolor: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: "12px", // ✅ rounder like CustomDialog
                   p: 1,
                   px: 1.25,
                 }}
@@ -748,8 +760,8 @@ export default function PreferencesSheet({
                   }
                   sx={{
                     "& .MuiSvgIcon-root": { fontSize: 28 },
-                    color: "#e91e63",
-                    "&.Mui-checked": { color: "#e91e63" },
+                    color: "#FF2D55",
+                    "&.Mui-checked": { color: "#FF2D55" },
                   }}
                 />
 
@@ -797,10 +809,12 @@ export default function PreferencesSheet({
       ModalProps={{ keepMounted: true }}
       PaperProps={{
         sx: {
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
           height: `${drawerVh}vh`,
-          bgcolor: "#0f0f0f",
+          background: "linear-gradient(160deg, #14071f 0%, #0a0412 100%)",
+          backdropFilter: "blur(25px)",
+          border: "1px solid rgba(255,255,255,0.08)",
           color: "#fff",
           px: 2,
           pt: 1,
@@ -826,8 +840,9 @@ export default function PreferencesSheet({
               width: 48,
               height: 5,
               borderRadius: 99,
-              bgcolor: "rgba(255,255,255,0.3)",
+              background: "linear-gradient(90deg, #FF2D55, #7000FF)",
               mt: 0.5,
+              opacity: 0.6,
             }}
           />
         </Box>
@@ -836,7 +851,14 @@ export default function PreferencesSheet({
         </IconButton>
       </Box>
 
-      <Divider sx={{ borderColor: "rgba(255,255,255,0.06)", mb: 1 }} />
+      <Divider
+        sx={{
+          mb: 2,
+          background: "linear-gradient(90deg, #FF2D55, #7000FF)",
+          height: "2px",
+          border: "none",
+        }}
+      />
 
       <Box
         sx={{
@@ -845,11 +867,9 @@ export default function PreferencesSheet({
           height: `calc(${drawerVh}vh - ${headerHeight + saveButtonReserve}px)`,
         }}
       >
-        <Typography variant="h6" align="center" sx={{ fontWeight: 700, mb: 1 }}>
+        <Typography variant="h6" align="center" sx={{ fontWeight: 700, mb: 2 }}>
           Preferences
         </Typography>
-
-        <Divider sx={{ mb: 2, bgcolor: "#e91e63" }} />
 
         <Box
           ref={tabListRef}
@@ -877,16 +897,28 @@ export default function PreferencesSheet({
                   }
                 }}
                 sx={{
-                  backgroundColor: activeTab === index ? "#f50057" : "#2d2d2d",
+                  backgroundColor:
+                    activeTab === index
+                      ? undefined // active uses gradient
+                      : "rgba(255,255,255,0.06)",
+                  background:
+                    activeTab === index
+                      ? "linear-gradient(90deg, #FF2D55, #7000FF)" // ✅ CustomDialog gradient
+                      : undefined,
                   borderRadius: "20px",
                   padding: "8px 16px",
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
                   color: "white",
-                  fontWeight: "500",
+                  fontWeight: activeTab === index ? 700 : 500,
                   fontSize: "14px",
                   minWidth: "fit-content",
+                  border:
+                    activeTab === index
+                      ? "none"
+                      : "1px solid rgba(255,255,255,0.1)",
+                  transition: "all 0.2s ease",
                 }}
               >
                 {item.label}
@@ -939,19 +971,19 @@ export default function PreferencesSheet({
               width: 66,
               height: 66,
               borderRadius: "999px",
-              backgroundColor: "#ffffff",
-              color: "#0f0f0f",
+              background: "linear-gradient(90deg, #FF2D55, #7000FF)",
+              color: "#fff",
               fontWeight: 700,
               boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
               "&:hover": {
+                opacity: 0.9,
                 transform: "translateY(-2px)",
-                backgroundColor: "#ffffff",
               },
             }}
             disabled={submitting || formik.isSubmitting}
           >
             {submitting || formik.isSubmitting ? (
-              <CircularProgress size={22} sx={{ color: "#0f0f0f" }} />
+              <CircularProgress size={22} sx={{ color: "#fff" }} />
             ) : (
               "Save"
             )}

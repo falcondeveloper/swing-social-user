@@ -61,12 +61,12 @@ import Footer from "@/components/Footer";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
-import Swal from "sweetalert2";
 import UserProfileModal from "@/components/UserProfileModal";
 import ProfileImgCheckerModel from "@/components/ProfileImgCheckerModel";
 import { formatDateEST } from "@/utils/formatDateEST";
 import AppFooterMobile from "@/layout/AppFooterMobile";
 import AppFooterDesktop from "@/layout/AppFooterDesktop";
+import CustomDialog from "@/components/CustomDialog";
 
 type Params = Promise<{ id: string }>;
 
@@ -111,6 +111,14 @@ export default function EventDetail(props: { params: Params }) {
     rsvpChecked: false,
     attendeeChecked: false,
   });
+
+  // Custom Dialog States
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<
+    "emailSuccess" | "emailError" | "rsvpSuccess" | "deleteSuccess" | null
+  >(null);
   const [openSaveRsvp, setOpenSaveRsvp] = useState(false);
   const [openDownloadModal, setOpenDownloadModal] = useState(false);
   const [downloadAttendee, setDownloadAttendee] = useState(false);
@@ -368,27 +376,23 @@ export default function EventDetail(props: { params: Params }) {
 
       const data = await response.json();
 
-      Swal.fire({
-        title: "Emails Sent!",
-        html: `
-        <p>Total Recipients: <strong>${data.totalRecipients}</strong></p>
-        <p>Successfully Sent: <strong>${data.totalSent}</strong></p>
-        <p>Failed to Send: <strong>${data.totalFailed}</strong></p>
-      `,
-        icon: "success",
-        confirmButtonText: "OK",
-      });
+      setDialogTitle("Emails Sent Successfully!");
+      setDialogMessage(`
+Total Recipients: ${data.totalRecipients}
+Successfully Sent: ${data.totalSent}
+Failed to Send: ${data.totalFailed}
+`);
+      setDialogAction("emailSuccess");
+      setDialogOpen(true);
+
       setOpen(false);
     } catch (error: any) {
       console.error("Error sending bulk email:", error);
-      setError("Failed to send emails.");
 
-      Swal.fire({
-        title: "Error!",
-        text: "Something went wrong while sending emails.",
-        icon: "error",
-        confirmButtonText: "OK",
-      });
+      setDialogTitle("Error Sending Emails");
+      setDialogMessage("Something went wrong while sending emails.");
+      setDialogAction("emailError");
+      setDialogOpen(true);
     } finally {
       setLoading(false);
     }
@@ -426,7 +430,12 @@ export default function EventDetail(props: { params: Params }) {
     const data = await response.json();
 
     if (data.status == 200) {
-      setOpenSaveRsvp(!openSaveRsvp);
+      if (data.status == 200) {
+        setDialogTitle("RSVP Saved");
+        setDialogMessage("Your RSVP has been successfully saved.");
+        setDialogAction(null);
+        setDialogOpen(true);
+      }
     }
   };
 
@@ -607,58 +616,51 @@ export default function EventDetail(props: { params: Params }) {
 
   const handleEmailRequest = async () => {
     if (!attendees || attendees.length === 0) {
-      Swal.fire({
-        title: "No Attendees",
-        text: "There are no attendees to send.",
-        icon: "warning",
-        confirmButtonText: "OK",
-      });
+      setDialogTitle("No Attendees");
+      setDialogMessage("There are no attendees to send.");
+      setDialogAction(null);
+      setDialogOpen(true);
       return;
     }
 
     const usernames = attendees.map((attendee: any) => attendee.Username);
 
-    const payload = {
-      usernames,
-    };
+    const payload = { usernames };
 
     setLoadingEmail(true);
 
     try {
       const response = await fetch("/api/user/sendAttendeesList", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (response.ok) {
-        Swal.fire({
-          title: "Email Sent",
-          text: "The attendees list was successfully emailed to the organizer.",
-          icon: "success",
-          confirmButtonText: "OK",
-        });
+        setDialogTitle("Email Sent");
+        setDialogMessage(
+          "The attendees list was successfully emailed to the organizer.",
+        );
+        setDialogAction(null);
+        setDialogOpen(true);
       } else {
         const errorData = await response.json();
-        Swal.fire({
-          title: "Failed to Send Email",
-          text:
-            errorData.message ||
+
+        setDialogTitle("Failed to Send Email");
+        setDialogMessage(
+          errorData.message ||
             "An error occurred while sending the attendees list.",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
+        );
+        setDialogAction("emailError");
+        setDialogOpen(true);
       }
     } catch (error) {
       console.error("Email error:", error);
-      Swal.fire({
-        title: "Error",
-        text: "Something went wrong while sending the email.",
-        icon: "error",
-        confirmButtonText: "OK",
-      });
+
+      setDialogTitle("Error");
+      setDialogMessage("Something went wrong while sending the email.");
+      setDialogAction("emailError");
+      setDialogOpen(true);
     } finally {
       setLoadingEmail(false);
     }
@@ -2319,25 +2321,18 @@ export default function EventDetail(props: { params: Params }) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={openSaveRsvp}>
-        <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
-          Confirm
-        </DialogTitle>
-        <DialogContent>
-          <Typography gutterBottom>RSVP Successfully save</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            autoFocus
-            onClick={() => {
-              setOpenSaveRsvp(!openSaveRsvp);
-            }}
-            sx={{ color: "red" }}
-          >
-            Ok
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText="OK"
+        cancelText="Close"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={() => {
+          setDialogOpen(false);
+        }}
+      />
+
       {isMobile ? <AppFooterMobile /> : <AppFooterDesktop />}
 
       <UserProfileModal

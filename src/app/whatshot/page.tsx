@@ -42,12 +42,12 @@ import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import { ArrowLeft } from "lucide-react";
 import UserProfileModal from "@/components/UserProfileModal";
-import Swal from "sweetalert2";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
 import Loader from "@/commonPage/Loader";
 import AppFooterMobile from "@/layout/AppFooterMobile";
 import AppFooterDesktop from "@/layout/AppFooterDesktop";
+import CustomDialog from "@/components/CustomDialog";
 
 export default function Whatshot() {
   const isMobile = useMediaQuery("(max-width: 480px)") ? true : false;
@@ -66,6 +66,11 @@ export default function Whatshot() {
     reportImage: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<"success" | "error">("success");
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
 
   const handleClose = () => {
     setShowDetail(false);
@@ -251,24 +256,31 @@ export default function Whatshot() {
 
   const handleDeletePost = async (postId: string) => {
     try {
-      await fetch("/api/user/whatshot/post/delete", {
+      const res = await fetch("/api/user/whatshot/post/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postId }),
       });
-      Swal.fire({
-        title: "Success!",
-        text: "Post updated successfully",
-        icon: "success",
-        confirmButtonText: "OK",
-      });
-    } catch (error) {
-      Swal.fire({
-        title: "Error!",
-        text: "Failed to update post",
-        icon: "error",
-        confirmButtonText: "OK",
-      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Failed to delete post");
+      }
+
+      setPosts((prev: any[]) => prev.filter((p) => p.Id !== postId));
+
+      setDialogType("success");
+      setDialogTitle("Success");
+      setDialogMessage("Post deleted successfully.");
+      setDialogOpen(true);
+    } catch (error: any) {
+      setDialogType("error");
+      setDialogTitle("Error");
+      setDialogMessage(
+        error?.message || "Something went wrong while deleting post.",
+      );
+      setDialogOpen(true);
     }
   };
 
@@ -1173,6 +1185,16 @@ export default function Whatshot() {
           </Box>
         </Fade>
       </Modal>
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText="OK"
+        cancelText="CLOSE"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={() => setDialogOpen(false)}
+      />
 
       {isMobile ? <AppFooterMobile /> : <AppFooterDesktop />}
     </Box>

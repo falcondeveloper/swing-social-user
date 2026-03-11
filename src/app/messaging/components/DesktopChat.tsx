@@ -16,13 +16,13 @@ import {
 import axios from "axios";
 import { Delete } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
-import Swal from "sweetalert2";
 import { jwtDecode } from "jwt-decode";
 import AppHeaderDesktop from "@/layout/AppHeaderDesktop";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import { useSocketContext } from "@/context/SocketProvider";
 import Loader from "@/commonPage/Loader";
 import LazyAvatar from "@/utils/LazyAvatar";
+import CustomDialog from "@/components/CustomDialog";
 
 interface ChatItem {
   ChatId: string;
@@ -48,6 +48,19 @@ const DesktopChat = () => {
   const [typingChats, setTypingChats] = useState<Record<string, boolean>>({});
   const typingTimeouts = useRef<Record<string, any>>({});
   const [loadingChats, setLoadingChats] = useState<boolean>(true);
+
+  // Global dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<"success" | "error" | null>(
+    null,
+  );
+
+  // For confirm delete
+  const [pendingDeleteChatId, setPendingDeleteChatId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -172,7 +185,7 @@ const DesktopChat = () => {
       setLoadingChats(true);
       const profileid = localStorage.getItem("logged_in_profile");
       const response = await axios.get(
-        `/api/user/messaging?profileid=${profileid}`
+        `/api/user/messaging?profileid=${profileid}`,
       );
       setChatList(response.data.data || []);
     } catch (err) {
@@ -192,7 +205,7 @@ const DesktopChat = () => {
         },
         (error) => {
           console.error("Geolocation error:", error);
-        }
+        },
       );
     } else {
       console.error("Geolocation is not supported by this browser.");
@@ -204,7 +217,7 @@ const DesktopChat = () => {
 
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
       );
 
       if (!response.ok) {
@@ -227,7 +240,7 @@ const DesktopChat = () => {
   const sendLocationToAPI = async (
     locationName: string,
     latitude: number,
-    longitude: number
+    longitude: number,
   ) => {
     if (!profileId) {
       console.error("Profile ID is missing.");
@@ -276,14 +289,14 @@ const DesktopChat = () => {
         setLoading(true);
         const response = await fetch(
           `/api/user/sweeping?page=${page}&size=100&search=${encodeURIComponent(
-            searchQuery
-          )}`
+            searchQuery,
+          )}`,
         );
         const data = await response.json();
 
         if (data?.profiles?.length > 0) {
           setUserProfiles((prev: any) =>
-            page === 1 ? data.profiles : [...prev, ...data.profiles]
+            page === 1 ? data.profiles : [...prev, ...data.profiles],
           );
         } else {
           setHasMore(false);
@@ -299,7 +312,7 @@ const DesktopChat = () => {
     fetchUserProfiles();
   }, [page, searchQuery]);
 
-  const deleteChat = async (chatId: any) => {
+  const deleteChat = (chatId: string) => {
     const token = localStorage.getItem("loginInfo");
 
     if (!token) {
@@ -310,54 +323,21 @@ const DesktopChat = () => {
     const decodeToken = jwtDecode<any>(token);
 
     if (decodeToken?.membership === 0) {
-      Swal.fire({
-        title: "Upgrade your membership.",
-        text: "Sorry, to delete chats, you need to upgrade your membership",
-        icon: "error",
-        showCancelButton: true,
-        confirmButtonText: "Upgrade the membership",
-        cancelButtonText: "Continue as the free member",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          router.push("/membership");
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-          router.push("/messaging");
-        } else {
-          router.back();
-        }
-      });
+      setDialogTitle("Upgrade your membership");
+      setDialogMessage(
+        "Sorry, to delete chats, you need to upgrade your membership.",
+      );
+      setDialogAction("error");
+      setDialogOpen(true);
       return;
     }
 
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "This chat will be deleted permanently!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch("/api/user/messaging/chat/delete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chatId }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to delete chat. Status: ${response.status}`);
-        }
-
-        Swal.fire("Deleted!", "The chat has been deleted.", "success");
-        fetchAllChats();
-      } catch (error) {
-        console.error(error);
-        Swal.fire("Error!", "Failed to delete the chat.", "error");
-      }
-    }
+    // Ask for confirmation
+    setPendingDeleteChatId(chatId);
+    setDialogTitle("Are you sure?");
+    setDialogMessage("This chat will be deleted permanently!");
+    setDialogAction("error");
+    setDialogOpen(true);
   };
 
   const openChatDetails = (chat: any) => {
@@ -366,22 +346,12 @@ const DesktopChat = () => {
     if (token) {
       const decodeToken = jwtDecode<any>(token);
       if (decodeToken?.membership == 0) {
-        Swal.fire({
-          title: `Upgrade your membership.`,
-          text: `Sorry, to access this page, you need to upgrade your membership`,
-          icon: "error",
-          showCancelButton: true,
-          confirmButtonText: "Upgrade the membership",
-          cancelButtonText: "Continue as the free member",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            router.push("/membership");
-          } else if (result.dismiss === Swal.DismissReason.cancel) {
-            router.push("/messaging");
-          } else {
-            router.back();
-          }
-        });
+        setDialogTitle("Upgrade your membership");
+        setDialogMessage(
+          "Sorry, to access this page, you need to upgrade your membership.",
+        );
+        setDialogAction("error");
+        setDialogOpen(true);
       } else {
         router.push(`/messaging/${chat}`);
       }
@@ -395,7 +365,7 @@ const DesktopChat = () => {
     return [...profiles].sort((a, b) =>
       (a.Username || "").localeCompare(b.Username || "", undefined, {
         sensitivity: "base",
-      })
+      }),
     );
   };
 
@@ -411,7 +381,7 @@ const DesktopChat = () => {
         </span>
       ) : (
         part
-      )
+      ),
     );
   };
 
@@ -809,6 +779,62 @@ const DesktopChat = () => {
           </Box>
         </Box>
       </Box>
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText={
+          pendingDeleteChatId
+            ? "Delete"
+            : dialogTitle.includes("Upgrade")
+              ? "Upgrade"
+              : "OK"
+        }
+        cancelText={pendingDeleteChatId ? "Cancel" : "Close"}
+        onClose={() => {
+          setDialogOpen(false);
+          setPendingDeleteChatId(null);
+        }}
+        onConfirm={async () => {
+          setDialogOpen(false);
+
+          // 🔴 If upgrading
+          if (dialogTitle.includes("Upgrade")) {
+            router.push("/membership");
+            return;
+          }
+
+          // 🗑 If deleting chat
+          if (pendingDeleteChatId) {
+            try {
+              const response = await fetch("/api/user/messaging/chat/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chatId: pendingDeleteChatId }),
+              });
+
+              if (!response.ok) {
+                throw new Error("Delete failed");
+              }
+
+              setDialogTitle("Deleted!");
+              setDialogMessage("The chat has been deleted.");
+              setDialogAction("success");
+              setDialogOpen(true);
+
+              fetchAllChats();
+            } catch (error) {
+              setDialogTitle("Error!");
+              setDialogMessage("Failed to delete the chat.");
+              setDialogAction("error");
+              setDialogOpen(true);
+            }
+
+            setPendingDeleteChatId(null);
+          }
+        }}
+      />
     </>
   );
 };

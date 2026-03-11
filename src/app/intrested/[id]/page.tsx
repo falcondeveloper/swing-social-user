@@ -1,5 +1,5 @@
 "use client";
-import React, { Suspense, useEffect, useMemo, memo, useState } from "react";
+import React, { useEffect, useMemo, memo, useState } from "react";
 import {
   Box,
   Button,
@@ -9,10 +9,6 @@ import {
   Grid,
   MenuItem,
   Paper,
-  Select,
-  Step,
-  StepLabel,
-  Stepper,
   TextField,
   ThemeProvider,
   Typography,
@@ -23,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import Carousel from "@/commonPage/Carousel";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 const theme = createTheme({
   palette: {
@@ -46,6 +43,7 @@ const ParticleField = memo(() => {
       delay: -Math.random() * 20,
     }));
   }, [isMobile]);
+
   return (
     <Box
       sx={{
@@ -83,6 +81,7 @@ const ParticleField = memo(() => {
     </Box>
   );
 });
+ParticleField.displayName = "ParticleField";
 
 const linkSx = {
   mb: 2,
@@ -91,20 +90,22 @@ const linkSx = {
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: "12px",
     textAlign: "left",
-    "& fieldset": {
-      borderColor: "rgba(255,255,255,0.2)",
-    },
-    "&:hover fieldset": {
-      borderColor: "rgba(255,255,255,0.4)",
-    },
+    "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+    "&:hover fieldset": { borderColor: "rgba(255,255,255,0.4)" },
   },
-  "& .MuiInputLabel-root": {
-    color: "rgba(255,255,255,0.7)",
-  },
-  "& .MuiSelect-select": {
-    textAlign: "left",
-  },
+  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.7)" },
+  "& .MuiSelect-select": { textAlign: "left" },
 } as const;
+
+const emptyValues = {
+  selectedOption: "",
+  age: "",
+  gender: "",
+  sexualOrientation: "",
+  partnerBirthday: "",
+  partnerGender: "",
+  partnerOrientation: "",
+};
 
 export default function ShowInterest({
   params,
@@ -114,18 +115,50 @@ export default function ShowInterest({
   const router = useRouter();
   const [id, setId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetchedValues, setFetchedValues] = useState<typeof emptyValues | null>(
+    null,
+  );
 
   useEffect(() => {
     (async () => {
       const p = await params;
       setId(p.id);
     })();
-  }, [params]);
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchUserData = async () => {
+      try {
+        const res = await fetch(`/api/user/sweeping/user?id=${id}`);
+        const data = await res.json();
+        const user = data?.user;
+
+        if (!user?.AccountType) return;
+
+        setFetchedValues({
+          selectedOption: user.AccountType || "",
+          age: user.Age ? String(user.Age) : "",
+          gender: user.Gender || "",
+          sexualOrientation: user.SexualOrientation || "",
+          partnerBirthday: user.PartnerAge ? String(user.PartnerAge) : "",
+          partnerGender: user.PartnerGender || "",
+          partnerOrientation: user.PartnerSexualOrientation || "",
+        });
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+      }
+    };
+
+    fetchUserData();
+  }, [id]);
 
   const validationSchema = Yup.object({
     selectedOption: Yup.string().required("Please select an option"),
     age: Yup.string().when("selectedOption", {
-      is: (val: string) => ["Male", "Woman", "Throuple", "Couple"].includes(val),
+      is: (val: string) =>
+        ["Male", "Woman", "Throuple", "Couple"].includes(val),
       then: (schema) => schema.required("Age is required"),
     }),
     gender: Yup.string().when("selectedOption", {
@@ -147,17 +180,7 @@ export default function ShowInterest({
     }),
   });
 
-  const initialValues = {
-    selectedOption: "",
-    age: "",
-    gender: "",
-    sexualOrientation: "",
-    partnerBirthday: "",
-    partnerGender: "",
-    partnerOrientation: "",
-  };
-
-  const handleSubmit = async (values: typeof initialValues) => {
+  const handleSubmit = async (values: typeof emptyValues) => {
     setLoading(true);
     const isSingle =
       values.selectedOption === "Woman" || values.selectedOption === "Male";
@@ -192,15 +215,12 @@ export default function ShowInterest({
         body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to submit form");
-      }
+      if (!response.ok) throw new Error("Failed to submit form");
 
       await router.push(`/upload/${id}`);
     } catch (error) {
       console.error("Error submitting form:", error);
       setLoading(false);
-      return;
     }
   };
 
@@ -231,52 +251,13 @@ export default function ShowInterest({
               background: "rgba(255, 255, 255, 0.05)",
               backdropFilter: "blur(20px)",
               border: "1px solid rgba(255, 255, 255, 0.1)",
-              overflow: "hidden",
+              overflow: "visible",
             }}
           >
-            <Stepper
-              activeStep={2}
-              alternativeLabel
-              sx={{
-                background: "transparent",
-                width: "100%",
-                margin: "0 auto 16px auto",
-              }}
-            >
-              {[
-                "Profile Info",
-                "Verify Phone",
-                "Preferences",
-                "Avatar & Banner",
-                "About",
-              ].map((label) => (
-                <Step key={label}>
-                  <StepLabel
-                    sx={{
-                      "& .MuiStepLabel-label": {
-                        color: "#fff !important",
-                        fontSize: { xs: "0.7rem", sm: "0.85rem" },
-                      },
-                      "& .MuiStepIcon-root": {
-                        color: "rgba(255,255,255,0.3)",
-                      },
-                      "& .MuiStepIcon-root.Mui-active": {
-                        color: "#c2185b",
-                      },
-                      "& .MuiStepIcon-root.Mui-completed": {
-                        color: "#c2185b",
-                      },
-                    }}
-                  >
-                    {/* {label} */}
-                  </StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-
             <Formik
-              initialValues={initialValues}
+              initialValues={fetchedValues ?? emptyValues}
               validationSchema={validationSchema}
+              enableReinitialize
               onSubmit={handleSubmit}
             >
               {({ values, errors, touched, handleChange }) => (
@@ -299,7 +280,6 @@ export default function ShowInterest({
                       >
                         Tell Us About Yourself
                       </Typography>
-
                       <Typography
                         sx={{
                           color: "#bbb",
@@ -327,7 +307,10 @@ export default function ShowInterest({
                         touched.selectedOption && Boolean(errors.selectedOption)
                       }
                       helperText={
-                        touched.selectedOption && errors.selectedOption
+                        touched.selectedOption &&
+                        typeof errors.selectedOption === "string"
+                          ? errors.selectedOption
+                          : ""
                       }
                       sx={linkSx}
                     >
@@ -353,10 +336,13 @@ export default function ShowInterest({
                           autoComplete="tel"
                           onChange={handleChange}
                           error={!!(touched.age && errors.age)}
-                          helperText={touched.age && errors.age}
+                          helperText={
+                            touched.age && typeof errors.age === "string"
+                              ? errors.age
+                              : ""
+                          }
                           sx={linkSx}
                         />
-
                         <TextField
                           select
                           fullWidth
@@ -371,7 +357,9 @@ export default function ShowInterest({
                           }
                           helperText={
                             touched.sexualOrientation &&
-                            errors.sexualOrientation
+                            typeof errors.sexualOrientation === "string"
+                              ? errors.sexualOrientation
+                              : ""
                           }
                           sx={linkSx}
                         >
@@ -385,7 +373,7 @@ export default function ShowInterest({
                         </TextField>
                       </>
                     ) : ["Throuple", "Couple"].includes(
-                        values.selectedOption
+                        values.selectedOption,
                       ) ? (
                       <>
                         <Typography
@@ -406,10 +394,13 @@ export default function ShowInterest({
                           autoComplete="tel"
                           onChange={handleChange}
                           error={!!(touched.age && errors.age)}
-                          helperText={touched.age && errors.age}
+                          helperText={
+                            touched.age && typeof errors.age === "string"
+                              ? errors.age
+                              : ""
+                          }
                           sx={linkSx}
                         />
-
                         <TextField
                           select
                           fullWidth
@@ -419,7 +410,11 @@ export default function ShowInterest({
                           onChange={handleChange}
                           variant="outlined"
                           error={touched.gender && Boolean(errors.gender)}
-                          helperText={touched.gender && errors.gender}
+                          helperText={
+                            touched.gender && typeof errors.gender === "string"
+                              ? errors.gender
+                              : ""
+                          }
                           sx={linkSx}
                         >
                           <MenuItem value="" disabled>
@@ -428,7 +423,6 @@ export default function ShowInterest({
                           <MenuItem value="Male">Male</MenuItem>
                           <MenuItem value="Female">Female</MenuItem>
                         </TextField>
-
                         <TextField
                           select
                           fullWidth
@@ -443,7 +437,9 @@ export default function ShowInterest({
                           }
                           helperText={
                             touched.sexualOrientation &&
-                            errors.sexualOrientation
+                            typeof errors.sexualOrientation === "string"
+                              ? errors.sexualOrientation
+                              : ""
                           }
                           sx={linkSx}
                         >
@@ -484,16 +480,17 @@ export default function ShowInterest({
                             )
                           }
                           helperText={
-                            touched.partnerBirthday && errors.partnerBirthday
+                            touched.partnerBirthday &&
+                            typeof errors.partnerBirthday === "string"
+                              ? errors.partnerBirthday
+                              : ""
                           }
                           sx={linkSx}
                         />
-
                         <TextField
                           select
                           fullWidth
                           label="Partner's Gender"
-                          placeholder="What's your partner's Gender?"
                           name="partnerGender"
                           value={values.partnerGender}
                           onChange={handleChange}
@@ -503,7 +500,10 @@ export default function ShowInterest({
                             Boolean(errors.partnerGender)
                           }
                           helperText={
-                            touched.partnerGender && errors.partnerGender
+                            touched.partnerGender &&
+                            typeof errors.partnerGender === "string"
+                              ? errors.partnerGender
+                              : ""
                           }
                           sx={linkSx}
                         >
@@ -513,12 +513,10 @@ export default function ShowInterest({
                           <MenuItem value="Male">Male</MenuItem>
                           <MenuItem value="Female">Female</MenuItem>
                         </TextField>
-
                         <TextField
                           select
                           fullWidth
                           label="Partner's Orientation"
-                          placeholder="What's your partner's Orientation?"
                           name="partnerOrientation"
                           value={values.partnerOrientation}
                           onChange={handleChange}
@@ -529,7 +527,9 @@ export default function ShowInterest({
                           }
                           helperText={
                             touched.partnerOrientation &&
-                            errors.partnerOrientation
+                            typeof errors.partnerOrientation === "string"
+                              ? errors.partnerOrientation
+                              : ""
                           }
                           sx={linkSx}
                         >
@@ -545,27 +545,55 @@ export default function ShowInterest({
                     ) : null}
                   </Grid>
 
-                  <Grid item xs={12} sx={{ textAlign: "center" }}>
+                  <Grid
+                    item
+                    xs={12}
+                    sx={{
+                      textAlign: "center",
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 0,
+                    }}
+                  >
+                    <Button
+                      type="button"
+                      onClick={() => router.back()}
+                      sx={{
+                        width: "56px",
+                        height: "56px",
+                        minWidth: "56px",
+                        borderRadius: "50%",
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        color: "#fff",
+                        mt: 2,
+                        mr: 2,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        "&:hover": { backgroundColor: "rgba(255,255,255,0.2)" },
+                      }}
+                    >
+                      <ArrowBackIcon />
+                    </Button>
                     <Button
                       type="submit"
                       disabled={loading}
                       sx={{
                         width: "56px",
                         height: "56px",
+                        minWidth: "56px",
                         borderRadius: "50%",
                         backgroundColor: "#c2185b",
                         color: "#fff",
                         mt: 2,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
                         "&:hover": { backgroundColor: "#ad1457" },
                       }}
                     >
                       {loading ? (
-                        <CircularProgress
-                          size={24}
-                          sx={{
-                            color: "#fff",
-                          }}
-                        />
+                        <CircularProgress size={24} sx={{ color: "#fff" }} />
                       ) : (
                         <ArrowForwardIosIcon />
                       )}

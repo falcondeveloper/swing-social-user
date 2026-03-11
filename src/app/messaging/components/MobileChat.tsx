@@ -19,13 +19,13 @@ import {
 import { ArrowBack, Search } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
 import axios from "axios";
-import Swal from "sweetalert2";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import AppHeaderMobile from "@/layout/AppHeaderMobile";
 import AppFooterMobile from "@/layout/AppFooterMobile";
 import { useSocketContext } from "@/context/SocketProvider";
 import CloseIcon from "@mui/icons-material/Close";
+import CustomDialog from "@/components/CustomDialog";
 
 const formatFullTime = (value?: string) => {
   if (!value) return "";
@@ -185,12 +185,23 @@ const MobileChat = () => {
   const [swipeChatId, setSwipeChatId] = useState<string | null>(null);
   const [typingChats, setTypingChats] = useState<Record<string, boolean>>({});
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<"success" | "error" | null>(
+    null,
+  );
+
   const [drawerHeight, setDrawerHeight] = useState("70vh");
 
   const startXRef = useRef(0);
   const isSwipingRef = useRef(false);
   const activeSearchRef = useRef("");
   const typingTimeouts = useRef<Record<string, any>>({});
+
+  const [pendingDeleteChatId, setPendingDeleteChatId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isConnected) return;
@@ -218,7 +229,7 @@ const MobileChat = () => {
           msg.MemberIdFrom === profileId ? msg.MemberIdTo : msg.MemberIdFrom;
 
         const existingIndex = prev.findIndex(
-          (c) => c.ToProfileId === otherUserId
+          (c) => c.ToProfileId === otherUserId,
         );
 
         const lastUp = msg.CreatedAt;
@@ -298,39 +309,22 @@ const MobileChat = () => {
 
     const decoded: any = jwtDecode(token);
     if (decoded?.membership === 0) {
-      Swal.fire({
-        title: "Upgrade required",
-        text: "Upgrade to start chatting 💖",
-        icon: "info",
-        confirmButtonText: "Upgrade",
-      }).then(() => router.push("/membership"));
+      setDialogTitle("Upgrade required");
+      setDialogMessage("Upgrade to start chatting 💖");
+      setDialogAction("error");
+      setDialogOpen(true);
       return;
     }
 
     router.push(`/messaging/${toProfileId}`);
   };
 
-  const deleteChat = async (chatId: string) => {
-    const confirm = await Swal.fire({
-      title: "Delete chat?",
-      text: "This conversation will be removed.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#FF1B6B",
-    });
-
-    if (!confirm.isConfirmed) return;
-
-    try {
-      await fetch("/api/user/messaging/chat/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId }),
-      });
-      fetchAllChats();
-    } catch {
-      Swal.fire("Error", "Could not delete chat", "error");
-    }
+  const deleteChat = (chatId: string) => {
+    setPendingDeleteChatId(chatId);
+    setDialogTitle("Delete chat?");
+    setDialogMessage("This conversation will be removed.");
+    setDialogAction("error");
+    setDialogOpen(true);
   };
 
   const handleOpenNewChat = () => {
@@ -382,7 +376,7 @@ const MobileChat = () => {
       const res = await fetch(
         `/api/user/sweeping?page=${
           isNewSearch ? 1 : page
-        }&size=100&search=${encodeURIComponent(currentSearch)}`
+        }&size=100&search=${encodeURIComponent(currentSearch)}`,
       );
 
       const data = await res.json();
@@ -391,7 +385,7 @@ const MobileChat = () => {
 
       if (data?.profiles?.length) {
         setUserProfiles((prev) =>
-          isNewSearch ? data.profiles : [...prev, ...data.profiles]
+          isNewSearch ? data.profiles : [...prev, ...data.profiles],
         );
         setPage((prev) => prev + 1);
       } else {
@@ -880,6 +874,53 @@ const MobileChat = () => {
           )}
         </DialogContent>
       </Drawer>
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText={
+          pendingDeleteChatId
+            ? "Delete"
+            : dialogTitle === "Upgrade required"
+              ? "Upgrade"
+              : "OK"
+        }
+        cancelText="Cancel"
+        onClose={() => {
+          setDialogOpen(false);
+          setPendingDeleteChatId(null);
+        }}
+        onConfirm={async () => {
+          setDialogOpen(false);
+
+          // 🗑 If deleting chat
+          if (pendingDeleteChatId) {
+            try {
+              await fetch("/api/user/messaging/chat/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chatId: pendingDeleteChatId }),
+              });
+
+              fetchAllChats();
+            } catch {
+              setDialogTitle("Error");
+              setDialogMessage("Could not delete chat");
+              setDialogAction("error");
+              setDialogOpen(true);
+            }
+
+            setPendingDeleteChatId(null);
+            return;
+          }
+
+          // 🔓 Upgrade case
+          if (dialogTitle === "Upgrade required") {
+            router.push("/membership");
+          }
+        }}
+      />
     </Box>
   );
 };

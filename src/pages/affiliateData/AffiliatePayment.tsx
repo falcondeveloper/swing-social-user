@@ -294,6 +294,7 @@ const AffiliatePayment = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!affiliateCode) return;
     const fetchAffiliate = async () => {
       try {
         setLoading(true);

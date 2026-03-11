@@ -40,7 +40,7 @@ const AffiliateBanners: React.FC<Props> = ({ affiliateCode }) => {
   const qrRef = useRef<HTMLDivElement | null>(null);
 
   const affiliateLinkDefault = `https://swingsocial.co?aff=${encodeURIComponent(
-    affiliateCode || "DEMO123"
+    affiliateCode || "DEMO123",
   )}`;
 
   const [affiliateLink, setAffiliateLink] =
@@ -49,8 +49,8 @@ const AffiliateBanners: React.FC<Props> = ({ affiliateCode }) => {
   useEffect(() => {
     setAffiliateLink(
       `https://swingsocial.co?aff=${encodeURIComponent(
-        affiliateCode || "DEMO123"
-      )}`
+        affiliateCode || "DEMO123",
+      )}`,
     );
   }, [affiliateCode]);
 
@@ -87,90 +87,92 @@ const AffiliateBanners: React.FC<Props> = ({ affiliateCode }) => {
 
   return (
     <>
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Link to Us - Banners & Links
-        </Typography>
+      <Grid container spacing={{ xs: 1, sm: 2 }} alignItems="stretch">
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Link to Us - Banners & Links
+          </Typography>
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                QR Code (embedded with referral)
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  QR Code (embedded with referral)
+                </Typography>
+                <Box
+                  sx={{ display: "flex", justifyContent: "center", p: 1 }}
+                  ref={qrRef}
+                >
+                  <QRCode value={affiliateLink} size={140} />
+                </Box>
+                <Button
+                  variant="contained"
+                  startIcon={<DownloadIcon size={14} />}
+                  onClick={() => downloadQR()}
+                  fullWidth
+                  sx={{ mt: 1, textTransform: "none" }}
+                >
+                  Download
+                </Button>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={8}>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Copy and paste any of the following HTML code to display the
+                banner on your site or blog. The referral code is embedded in
+                the link.
               </Typography>
-              <Box
-                sx={{ display: "flex", justifyContent: "center", p: 1 }}
-                ref={qrRef}
-              >
-                <QRCode value={affiliateLink} size={140} />
-              </Box>
-              <Button
-                variant="contained"
-                startIcon={<DownloadIcon size={14} />}
-                onClick={() => downloadQR()}
-                fullWidth
-                sx={{ mt: 1, textTransform: "none" }}
-              >
-                Download
-              </Button>
-            </Paper>
-          </Grid>
 
-          <Grid item xs={12} md={8}>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Copy and paste any of the following HTML code to display the
-              banner on your site or blog. The referral code is embedded in the
-              link.
-            </Typography>
+              <Grid container spacing={2} sx={{ paddingBottom: "50px" }}>
+                {banners.map((b) => (
+                  <Grid item xs={12} md={6} key={b.id}>
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                        {b.title}
+                      </Typography>
 
-            <Grid container spacing={2}>
-              {banners.map((b) => (
-                <Grid item xs={12} md={6} key={b.id}>
-                  <Paper sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      {b.title}
-                    </Typography>
+                      <Box
+                        sx={{ mb: 1 }}
+                        dangerouslySetInnerHTML={{ __html: b.html }}
+                      />
 
-                    <Box
-                      sx={{ mb: 1 }}
-                      dangerouslySetInnerHTML={{ __html: b.html }}
-                    />
+                      <TextField
+                        value={b.html}
+                        multiline
+                        rows={3}
+                        fullWidth
+                        InputProps={{ readOnly: true }}
+                        sx={{ mb: 1 }}
+                      />
 
-                    <TextField
-                      value={b.html}
-                      multiline
-                      rows={3}
-                      fullWidth
-                      InputProps={{ readOnly: true }}
-                      sx={{ mb: 1 }}
-                    />
-
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => copyToClipboard(b.html)}
-                        startIcon={<ContentCopyIcon />}
-                        sx={{ textTransform: "none", flex: 1 }}
-                      >
-                        Copy HTML
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => copyToClipboard(affiliateLink)}
-                        sx={{ textTransform: "none", flex: 1 }}
-                      >
-                        Copy Link
-                      </Button>
-                    </Box>
-                  </Paper>
-                </Grid>
-              ))}
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => copyToClipboard(b.html)}
+                          startIcon={<ContentCopyIcon />}
+                          sx={{ textTransform: "none", flex: 1 }}
+                        >
+                          Copy HTML
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => copyToClipboard(affiliateLink)}
+                          sx={{ textTransform: "none", flex: 1 }}
+                        >
+                          Copy Link
+                        </Button>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
             </Grid>
           </Grid>
-        </Grid>
-      </Paper>
+        </Paper>
+      </Grid>
     </>
   );
 };

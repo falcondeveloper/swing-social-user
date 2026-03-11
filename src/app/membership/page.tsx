@@ -35,10 +35,10 @@ import {
   Tag,
   Sparkles,
 } from "lucide-react";
-import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import CheckCircle from "@mui/icons-material/CheckCircle";
+import CustomDialog from "@/components/CustomDialog";
 
 const theme = createTheme({
   palette: {
@@ -247,6 +247,13 @@ const BillingUpgrade: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string>("");
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<"success" | "error" | null>(
+    null,
+  );
+
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -370,7 +377,7 @@ const BillingUpgrade: React.FC = () => {
 
     if (promoCodeText) {
       const filter = promoCodeList.find(
-        (val) => val?.PromoCodeText === promoCodeText
+        (val) => val?.PromoCodeText === promoCodeText,
       );
       if (filter) {
         setPromocodeMessage(filter.DisplayMessage);
@@ -386,7 +393,7 @@ const BillingUpgrade: React.FC = () => {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
 
@@ -544,7 +551,7 @@ const BillingUpgrade: React.FC = () => {
 
     try {
       const match = formData.membershipOption.match(
-        /^([\w\s-]+) - \$([\d.]+)$/
+        /^([\w\s-]+) - \$([\d.]+)$/,
       );
       let unit = match?.[1];
       let length = "1";
@@ -620,27 +627,17 @@ const BillingUpgrade: React.FC = () => {
         await handleUpdateMembershipStatus(profileId, pprice);
         await handleUpdateAffiliate(profileId);
 
-        Swal.fire({
-          title: "Payment Successful! 🎉",
-          text: data.message,
-          icon: "success",
-          confirmButtonText: "Continue to Members",
-          confirmButtonColor: "#FF1B6B",
-          background: "#1e1e1e",
-          color: "#ffffff",
-          showClass: {
-            popup: "animate__animated animate__fadeInUp",
-          },
-        }).then(() => {
-          router.push("/members");
-        });
+        setDialogTitle("Payment Successful! 🎉");
+        setDialogMessage(data.message);
+        setDialogAction("success");
+        setDialogOpen(true);
       } else {
         setFormError(data.message || "Payment failed. Please try again.");
       }
     } catch (error) {
       console.error("🚨 Payment submission error:", error);
       setFormError(
-        "We're experiencing technical difficulties. Please try again."
+        "We're experiencing technical difficulties. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -661,7 +658,7 @@ const BillingUpgrade: React.FC = () => {
 
   const handleUpdateMembershipStatus = async (
     userid: string,
-    pprice: string
+    pprice: string,
   ) => {
     try {
       const response = await fetch("/api/user/membership", {
@@ -1363,6 +1360,22 @@ const BillingUpgrade: React.FC = () => {
           </Alert>
         </Container>
       </Box>
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText={dialogAction === "success" ? "Continue to Members" : "OK"}
+        cancelText="Close"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={() => {
+          setDialogOpen(false);
+
+          if (dialogAction === "success") {
+            router.push("/members");
+          }
+        }}
+      />
     </ThemeProvider>
   );
 };

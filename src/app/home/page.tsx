@@ -15,7 +15,6 @@ import {
   useTheme,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import Swal from "sweetalert2";
 import { motion } from "framer-motion";
 import { jwtDecode } from "jwt-decode";
 import ProfileImgCheckerModel from "@/components/ProfileImgCheckerModel";
@@ -23,6 +22,7 @@ import AppFooterMobile from "@/layout/AppFooterMobile";
 import AppFooterDesktop from "@/layout/AppFooterDesktop";
 import AppHeaderMobile from "@/layout/AppHeaderMobile";
 import AppHeaderDesktop from "@/layout/AppHeaderDesktop";
+import CustomDialog from "@/components/CustomDialog";
 
 const categories = [
   {
@@ -79,6 +79,13 @@ const Home = () => {
     return false;
   });
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<"success" | "error" | null>(
+    null,
+  );
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const tokenDevice = localStorage.getItem("loginInfo");
@@ -96,7 +103,6 @@ const Home = () => {
       localStorage.setItem("isNewMessage", "false");
     }
   };
-
 
   useEffect(() => {
     if (profileId) {
@@ -124,7 +130,7 @@ const Home = () => {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 300000,
-      }
+      },
     );
   };
 
@@ -133,7 +139,7 @@ const Home = () => {
 
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
       );
 
       if (!response.ok) {
@@ -155,7 +161,7 @@ const Home = () => {
   const sendLocationToAPI = async (
     locationName: string,
     latitude: number,
-    longitude: number
+    longitude: number,
   ) => {
     if (!profileId) {
       console.error("Profile ID is missing.");
@@ -188,10 +194,13 @@ const Home = () => {
 
   const handleNavigate = (category: any) => {
     if (category?.isComingSoon) {
-      Swal.fire({
-        title: "Coming Soon",
-        timer: 2000,
-      });
+      setDialogTitle("Coming Soon");
+      setDialogMessage("This feature will be available very soon 🚀");
+      setDialogAction(null);
+      setDialogOpen(true);
+      setTimeout(() => {
+        setDialogOpen(false);
+      }, 2000);
     } else {
       router.push(category?.url);
     }
@@ -722,6 +731,16 @@ const Home = () => {
           <AppFooterDesktop />
         </Box>
       )}
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText="OK"
+        cancelText="Close"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={() => setDialogOpen(false)}
+      />
 
       {profileId && <ProfileImgCheckerModel profileId={profileId} />}
     </>

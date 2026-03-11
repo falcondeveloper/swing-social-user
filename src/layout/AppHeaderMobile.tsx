@@ -29,6 +29,7 @@ import {
   Bell,
   Calendar,
 } from "lucide-react";
+import LazyAvatar from "@/utils/LazyAvatar";
 
 const AppHeaderMobile = () => {
   const router = useRouter();
@@ -127,17 +128,19 @@ const AppHeaderMobile = () => {
           />
 
           <IconButton onClick={() => router.push("/profile")}>
-            <Avatar
+            <LazyAvatar
               src={avatar || undefined}
+              alt="Avatar"
+              size={40}
               sx={{
-                width: 36,
-                height: 36,
-                border: "2px solid #FF1B6B",
                 borderRadius: "10px",
               }}
-            >
-              {!avatar && userName?.charAt(0)}
-            </Avatar>
+              imgStyle={{
+                objectFit: "cover",
+                height: "100%",
+                width: "100%",
+              }}
+            />
           </IconButton>
         </Toolbar>
       </AppBar>
@@ -284,8 +287,6 @@ const AppHeaderMobile = () => {
 };
 
 export default AppHeaderMobile;
-
-
 
 // "use client";
 

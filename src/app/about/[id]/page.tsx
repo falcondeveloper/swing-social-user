@@ -21,6 +21,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import Carousel from "@/commonPage/Carousel";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 const theme = createTheme({
   palette: {
@@ -99,11 +100,10 @@ export default function About(props: { params: Params }) {
   useEffect(() => {
     const getIdFromParam = async () => {
       const params = await props.params;
-      const pid: any = params.id;
-      setId(pid);
+      setId(params.id);
     };
     getIdFromParam();
-  }, [props]);
+  }, [props.params]);
 
   const validationSchema = Yup.object({
     tagline: Yup.string().required("Tagline is required."),
@@ -113,8 +113,14 @@ export default function About(props: { params: Params }) {
       .min(20, "About must be at least 20 characters."),
   });
 
+  const savedDraft = useMemo(() => {
+    if (!id || typeof window === "undefined") return null;
+    return JSON.parse(localStorage.getItem(`register_step5_${id}`) || "null");
+  }, [id]);
+
   const formik = useFormik({
-    initialValues: {
+    enableReinitialize: true,
+    initialValues: savedDraft || {
       tagline: "",
       about: "",
     },
@@ -146,6 +152,13 @@ export default function About(props: { params: Params }) {
     },
   });
 
+  const formikValuesStr = JSON.stringify(formik.values);
+  useEffect(() => {
+    if (id) {
+      localStorage.setItem(`register_step5_${id}`, formikValuesStr);
+    }
+  }, [formikValuesStr, id]);
+
   return (
     <ThemeProvider theme={theme}>
       <Box
@@ -175,7 +188,7 @@ export default function About(props: { params: Params }) {
               overflow: "hidden",
             }}
           >
-            <Stepper
+            {/* <Stepper
               activeStep={4}
               alternativeLabel
               sx={{
@@ -209,11 +222,10 @@ export default function About(props: { params: Params }) {
                       },
                     }}
                   >
-                    {/* {label} */}
                   </StepLabel>
                 </Step>
               ))}
-            </Stepper>
+            </Stepper> */}
             <Grid item xs={12}>
               <Typography
                 variant="h6"
@@ -262,7 +274,12 @@ export default function About(props: { params: Params }) {
                   error={
                     formik.touched.tagline && Boolean(formik.errors.tagline)
                   }
-                  helperText={formik.touched.tagline && formik.errors.tagline}
+                  helperText={
+                    formik.touched.tagline &&
+                    typeof formik.errors.tagline === "string"
+                      ? formik.errors.tagline
+                      : undefined
+                  }
                   sx={{
                     mt: 1,
                     mb: 2,
@@ -274,6 +291,12 @@ export default function About(props: { params: Params }) {
                       "&:hover fieldset": {
                         borderColor: "rgba(255,255,255,0.4)",
                       },
+                    },
+                    "& .MuiFormHelperText-root": {
+                      color:
+                        formik.touched.about && formik.errors.about
+                          ? "#f44336"
+                          : "#fff",
                     },
                     "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.7)" },
                   }}
@@ -310,15 +333,17 @@ export default function About(props: { params: Params }) {
                   onBlur={formik.handleBlur}
                   error={formik.touched.about && Boolean(formik.errors.about)}
                   helperText={
-                    formik.touched.about && formik.errors.about
+                    formik.touched.about &&
+                    typeof formik.errors.about === "string"
                       ? formik.errors.about
                       : `${formik.values.about.length}/20 characters`
                   }
                   sx={{
                     mt: 1,
                     mb: 2,
+
                     "& .MuiOutlinedInput-root": {
-                      color: "white",
+                      color: "#fff",
                       backgroundColor: "rgba(255,255,255,0.05)",
                       borderRadius: "12px",
                       "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
@@ -326,27 +351,68 @@ export default function About(props: { params: Params }) {
                         borderColor: "rgba(255,255,255,0.4)",
                       },
                     },
-                    "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.7)" },
+
+                    "& .MuiInputLabel-root": {
+                      color: "rgba(255,255,255,0.7)",
+                    },
+
+                    "& .MuiFormHelperText-root": {
+                      color:
+                        formik.touched.about && formik.errors.about
+                          ? "#f44336"
+                          : "#fff",
+                    },
                   }}
                 />
 
                 {/* Continue Button */}
-                <Grid item xs={12} sx={{ textAlign: "center" }}>
+                <Grid
+                  item
+                  xs={12}
+                  sx={{
+                    textAlign: "center",
+                    mt: 2,
+                    mb: 2,
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 0,
+                  }}
+                >
                   <Button
-                    type="submit"
+                    onClick={() => router.back()}
                     disabled={isUploading}
                     sx={{
                       width: "56px",
                       height: "56px",
+                      minWidth: "56px",
                       borderRadius: "50%",
-                      backgroundColor: "#e91e63",
+                      backgroundColor: "rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      mr: 2,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      "&:hover": {
+                        backgroundColor: "rgba(255,255,255,0.2)",
+                      },
+                    }}
+                  >
+                    <ArrowBackIcon />
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isUploading}
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      minWidth: 56,
+                      borderRadius: "50%",
+                      backgroundColor: "#c2185b",
                       color: "#fff",
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "center",
-                      margin: "0 auto",
-                      mt: 1,
-                      "&:hover": { backgroundColor: "#d81b60" },
+                      "&:hover": { backgroundColor: "#ad1457" },
                     }}
                   >
                     {isUploading ? (

@@ -225,7 +225,7 @@ const CreateEventForm: React.FC = () => {
       const body = {
         profileId,
         profileName,
-        email, // <-- include email in the payload
+        email,
         values: extra?.partialValues ?? formik.values,
       };
 

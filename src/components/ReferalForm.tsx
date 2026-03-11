@@ -23,8 +23,8 @@ import React, { memo, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { jwtDecode } from "jwt-decode";
-import Swal from "sweetalert2";
 import Link from "next/link";
+import CustomDialog from "@/components/CustomDialog";
 
 const theme = createTheme({
   palette: {
@@ -53,7 +53,7 @@ const nameRegExp = /^[A-Za-z\s'-]{2,40}$/;
 
 const validationSchema = Yup.object().shape({
   organizationType: Yup.string().required(
-    "Please select your organization type."
+    "Please select your organization type.",
   ),
   companyName: Yup.string()
     .min(2, "Company name is too short.")
@@ -108,7 +108,7 @@ const validationSchema = Yup.object().shape({
 
   agreeToTerms: Yup.boolean().oneOf(
     [true],
-    "You must agree to the terms before submitting"
+    "You must agree to the terms before submitting",
   ),
 });
 
@@ -217,6 +217,25 @@ const ReferalForm = ({
 }) => {
   const [profileId, setProfileId] = useState<string | null>(null);
 
+  // Custom Dialog State
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<
+    "success" | "partial" | "error" | null
+  >(null);
+
+  const showDialog = (
+    title: string,
+    message: string,
+    action: typeof dialogAction = null,
+  ) => {
+    setDialogTitle(title);
+    setDialogMessage(message);
+    setDialogAction(action);
+    setDialogOpen(true);
+  };
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const tokenDevice = localStorage.getItem("loginInfo");
@@ -234,7 +253,7 @@ const ReferalForm = ({
     if (value.length > 6) {
       value = `(${value.substring(0, 3)}) ${value.substring(
         3,
-        6
+        6,
       )}-${value.substring(6)}`;
     } else if (value.length > 3) {
       value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
@@ -280,13 +299,11 @@ const ReferalForm = ({
         const data = await res.json();
 
         if (!res.ok) {
-          await Swal.fire({
-            title: "Submission failed",
-            text: data?.message || "Try again later.",
-            icon: "error",
-            confirmButtonText: "OK",
-            confirmButtonColor: "#7000FF",
-          });
+          showDialog(
+            "Submission Failed",
+            data?.message || "Please try again later.",
+            "error",
+          );
           return;
         }
 
@@ -296,37 +313,18 @@ const ReferalForm = ({
           body: JSON.stringify({ user_id: profileId }),
         });
 
-        let statusData = null;
-        try {
-          statusData = await statusRes.json();
-        } catch (e) {
-          statusData = null;
-        }
-
         if (!statusRes.ok) {
-          await Swal.fire({
-            title: "Partial success",
-            html: `
-      <p>Your affiliate application was submitted successfully.</p>
-      <p>However, we couldn't update your affiliate status automatically.</p>
-    `,
-            icon: "warning",
-            confirmButtonText: "OK",
-          });
-
-          window.location.reload();
+          showDialog(
+            "Application Submitted",
+            "Your affiliate application was submitted successfully. However, we couldn't update your affiliate status automatically.",
+            "partial",
+          );
         } else {
-          await Swal.fire({
-            title: "Welcome to the Affiliate Program!",
-            html: `
-      <p>Your affiliate application was submitted successfully.</p>
-      <p>You’ll be redirected to your dashboard shortly.</p>
-    `,
-            icon: "success",
-            confirmButtonText: "Continue",
-          });
-
-          window.location.reload();
+          showDialog(
+            "Welcome to the Affiliate Program!",
+            "Your application was submitted successfully. You will be redirected shortly.",
+            "success",
+          );
         }
 
         resetForm();
@@ -335,12 +333,7 @@ const ReferalForm = ({
         }
       } catch (err) {
         console.error("Affiliate apply error:", err);
-        await Swal.fire({
-          title: "Something went wrong",
-          text: "Please try again later.",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
+        showDialog("Something Went Wrong", "Please try again later.", "error");
       } finally {
         setSubmitting(false);
       }
@@ -1003,6 +996,22 @@ const ReferalForm = ({
             </Paper>
           </Container>
         </Box>
+
+        <CustomDialog
+          open={dialogOpen}
+          title={dialogTitle}
+          description={dialogMessage}
+          confirmText="OK"
+          cancelText="Close"
+          onClose={() => setDialogOpen(false)}
+          onConfirm={() => {
+            setDialogOpen(false);
+
+            if (dialogAction === "success" || dialogAction === "partial") {
+              window.location.reload();
+            }
+          }}
+        />
       </ThemeProvider>
     </>
   );

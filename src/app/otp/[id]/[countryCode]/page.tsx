@@ -129,7 +129,11 @@ export default function Otp({
   }, [phone]);
 
   useEffect(() => {
-    setPhone(localStorage.getItem("phone"));
+    const storedPhone = localStorage.getItem("phone");
+
+    if (storedPhone) {
+      setPhone(storedPhone);
+    }
     setId(localStorage.getItem("logged_in_profile") || idEmail);
   }, [idEmail, countryCode]);
 
@@ -160,7 +164,7 @@ export default function Otp({
             body: JSON.stringify({ id, status: 1 }),
           });
           toast.success("OTP Verified Successfully");
-          router.push(`/intrested/${id}`);
+          router.replace(`/intrested/${id}`);
           localStorage.removeItem("phone");
         } else {
           setError(true);
@@ -183,10 +187,25 @@ export default function Otp({
     formik.setFieldValue("otp", newOtp);
 
     if (value && index < newOtp.length - 1) {
+      // Move to next input
       const nextInput = document.getElementById(
         `otp-${index + 1}`,
       ) as HTMLInputElement;
       nextInput?.focus();
+    }
+
+    // ✅ Last digit entered — blur to dismiss keyboard
+    if (value && index === newOtp.length - 1) {
+      const lastInput = document.getElementById(
+        `otp-${index}`,
+      ) as HTMLInputElement;
+      lastInput?.blur();
+
+      // ✅ Auto-submit if all digits filled
+      const allFilled = newOtp.every((d) => d !== "");
+      if (allFilled) {
+        formik.handleSubmit();
+      }
     }
   };
 
@@ -202,18 +221,27 @@ export default function Otp({
     }
   };
 
-  const handleVerificationPhone = async (phone: string) => {
+  const handleVerificationPhone = async (mobile: string) => {
+    if (!mobile) {
+      toast.error("Phone number not found. Please try again.");
+      return;
+    }
+
     try {
       const res = await fetch("/api/user/otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, countryCode }),
+        body: JSON.stringify({
+          phone: mobile,
+          countryCode: countryCode,
+        }),
       });
+
       if (!res.ok) throw new Error("Failed to send OTP");
+
       const data = await res.json();
-      setResendTimer(90);
+      setResendTimer(65);
       setOtpData(data?.data);
-      console.log(data?.data);
     } catch (error) {
       console.error("Error:", error);
     }
@@ -267,7 +295,7 @@ export default function Otp({
                 width: "100%",
               }}
             >
-              <Stepper
+              {/* <Stepper
                 activeStep={1}
                 alternativeLabel
                 sx={{
@@ -301,11 +329,10 @@ export default function Otp({
                         },
                       }}
                     >
-                      {/* {label} */}
                     </StepLabel>
                   </Step>
                 ))}
-              </Stepper>
+              </Stepper> */}
               <Box
                 sx={{
                   display: "flex",
@@ -436,8 +463,16 @@ export default function Otp({
                         variant="text"
                         startIcon={<RefreshIcon fontSize="small" />}
                         onClick={() => {
+                          const storedPhone =
+                            phone || localStorage.getItem("phone");
+
+                          if (!storedPhone) {
+                            toast.error("Phone number missing.");
+                            return;
+                          }
+
                           toast.success("Code is resent");
-                          handleVerificationPhone(phone ?? "");
+                          handleVerificationPhone(storedPhone);
                         }}
                         disabled={resendTimer > 0}
                         sx={{

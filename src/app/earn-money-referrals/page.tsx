@@ -10,9 +10,9 @@ import {
   Tab,
   useMediaQuery,
   Stack,
+  Button,
 } from "@mui/material";
 import { jwtDecode } from "jwt-decode";
-import Swal from "sweetalert2";
 import AffiliateHistory from "@/pages/affiliateData/AffiliateHistory";
 import AffiliateBanners from "@/pages/affiliateData/AffiliateBanners";
 import AffiliatePayment from "@/pages/affiliateData/AffiliatePayment";
@@ -24,6 +24,7 @@ import AppFooterMobile from "@/layout/AppFooterMobile";
 import AppFooterDesktop from "@/layout/AppFooterDesktop";
 import AppHeaderMobile from "@/layout/AppHeaderMobile";
 import AppHeaderDesktop from "@/layout/AppHeaderDesktop";
+import CustomDialog from "@/components/CustomDialog";
 
 const theme = createTheme({
   palette: {
@@ -114,6 +115,11 @@ const page = () => {
   const [affiliateCode, setAffiliateCode] = useState<string | null>(null);
   const [affiliateStatus, setAffiliateStatus] = useState<boolean | null>(null);
   const [profileId, setProfileId] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState({
+    title: "",
+    description: "",
+  });
 
   useEffect(() => {
     const fetchAffiliateStatus = async () => {
@@ -122,12 +128,11 @@ const page = () => {
           const tokenDevice = localStorage.getItem("loginInfo");
 
           if (!tokenDevice) {
-            Swal.fire({
-              icon: "warning",
+            setDialogConfig({
               title: "Not Logged In",
-              text: "Please log in to access the affiliate page.",
-              confirmButtonColor: "#7000FF",
+              description: "Please log in to access the affiliate page.",
             });
+            setDialogOpen(true);
             return;
           }
 
@@ -152,19 +157,20 @@ const page = () => {
             });
 
             const data = await res.json();
-            if (data.success) {
-              setAffiliateCode(data.affiliate_code);
+            if (data?.success) {
+              setAffiliateCode(data?.affiliate_code);
+            } else {
+              console.error("Failed to get affiliate code:", data); // ← add this
             }
           }
         }
       } catch (err) {
-        console.error("Error checking affiliate status:", err);
-        Swal.fire({
-          icon: "error",
+        setDialogConfig({
           title: "Error",
-          text: "Unable to check affiliate status. Please try again later.",
-          confirmButtonColor: "#7000FF",
+          description:
+            "Unable to check affiliate status. Please try again later.",
         });
+        setDialogOpen(true);
       }
     };
 
@@ -292,6 +298,14 @@ const page = () => {
         </Box>
         {isSm ? <AppFooterMobile /> : <AppFooterDesktop />}
       </ThemeProvider>
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        onClose={() => setDialogOpen(false)}
+        confirmText="OK"
+      />
     </>
   );
 };

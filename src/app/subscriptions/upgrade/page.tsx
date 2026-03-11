@@ -21,8 +21,8 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import Swal from "sweetalert2";
 import { jwtDecode } from "jwt-decode";
+import CustomDialog from "@/components/CustomDialog";
 
 const ParticleField = memo(() => {
   const isMobile = useMediaQuery("(max-width:600px)");
@@ -102,6 +102,11 @@ export default function Pricing() {
   const [profile, setProfile] = useState<any>();
   const [currentName, setCurrentName] = useState<any>("");
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<"login" | null>(null);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const tokenDevice = localStorage.getItem("loginInfo");
@@ -121,10 +126,10 @@ export default function Pricing() {
         billingCycle === "1"
           ? "$17.95"
           : billingCycle === "3"
-          ? "$39.95"
-          : billingCycle === "6"
-          ? "$69.95"
-          : "$129.95",
+            ? "$39.95"
+            : billingCycle === "6"
+              ? "$69.95"
+              : "$129.95",
       features: [
         "Browse & Search Members",
         "Browse & Search Events",
@@ -177,18 +182,13 @@ export default function Pricing() {
         toast.success("Subscribed to Free plan!");
         await sendEmail(userName, email);
 
-        await Swal.fire({
-          title: "You're All Set!",
-          html: `
-          <p style="margin-bottom: 10px;">Your free plan has been activated successfully.</p>
-          <strong>You're now ready to explore the platform.</strong>
-        `,
-          icon: "success",
-          confirmButtonText: "Access Swingsocial",
-          confirmButtonColor: "#f50057",
-        });
-
-        await handleLogin(userName, password);
+        setDialogTitle("You're All Set!");
+        setDialogMessage(
+          "Your free plan has been activated successfully. You're now ready to explore the platform.",
+        );
+        setDialogAction("login");
+        setDialogOpen(true);
+        return;
       } else {
         localStorage.setItem("ssprice", price);
         localStorage.setItem("ssplan", plan);
@@ -495,6 +495,21 @@ export default function Pricing() {
           </Container>
         </Box>
       </ThemeProvider>
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText="ACCESS SWINGSOCIAL"
+        cancelText="CLOSE"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={async () => {
+          setDialogOpen(false);
+
+          if (dialogAction === "login") {
+            await handleLogin(userName, password);
+          }
+        }}
+      />
     </>
   );
 }

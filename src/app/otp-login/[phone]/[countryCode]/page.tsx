@@ -241,24 +241,29 @@ const Page = ({
   //   }
   // };
 
-  const handleVerificationPhone = async (phone: string) => {
+  const handleVerificationPhone = async (mobile: string) => {
+    if (!mobile) {
+      toast.error("Phone number not found. Please try again.");
+      return;
+    }
+
     try {
       const res = await fetch("/api/user/otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, countryCode }),
+        body: JSON.stringify({
+          phone: mobile,
+          countryCode: countryCode,
+        }),
       });
 
+      if (!res.ok) throw new Error("Failed to send OTP");
+
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.message || "Failed to send OTP");
-      }
-
-      setResendTimer(90);
+      setResendTimer(65);
       setOtpData(data?.data);
-    } catch (error: any) {
-      console.error("OTP Error:", error);
+    } catch (error) {
+      console.error("Error:", error);
     }
   };
 

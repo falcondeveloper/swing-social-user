@@ -25,6 +25,7 @@ import {
   Alert,
   Fade,
   Chip,
+  Stack,
 } from "@mui/material";
 import InstructionModal from "@/components/InstructionModal";
 import UserProfileModal from "@/components/UserProfileModal";
@@ -35,6 +36,8 @@ import Loader from "@/commonPage/Loader";
 import AppHeaderMobile from "@/layout/AppHeaderMobile";
 import AppFooterMobile from "@/layout/AppFooterMobile";
 import { ArrowRight, Camera, Crown, Lock, Upload } from "lucide-react";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import BoltIcon from "@mui/icons-material/Bolt";
 
 export interface DetailViewHandle {
   open: (id: string) => void;
@@ -1909,96 +1912,124 @@ export default function MobileSweaping() {
               alignItems: "center",
               justifyContent: "center",
               textAlign: "center",
-              color: "white",
-              px: 3,
+              color: "#fff",
+              px: 2,
             }}
           >
             <Box
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-                maxWidth: 340,
+                width: "100%",
+                maxWidth: 360,
+                p: 3,
+                borderRadius: "20px",
+                background: "rgba(20, 10, 35, 0.85)",
+                backdropFilter: "blur(25px)",
+                border: "2px solid rgba(255,255,255,0.08)",
               }}
             >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  lineHeight: "26px",
-                }}
-              >
-                No more profiles right now ❤️
-              </Typography>
-
-              <Typography
-                sx={{
-                  fontSize: "14px",
-                  color: "rgba(255,255,255,0.75)",
-                  lineHeight: "20px",
-                }}
-              >
-                You’ve seen everyone that matches your current preferences. Try
-                adjusting them to discover more people.
-              </Typography>
-
-              <Box
-                sx={{
-                  textAlign: "left",
-                  width: "100%",
-                  mt: 1,
-                  px: 1,
-                }}
-              >
-                <Typography
+              <Stack spacing={2} alignItems="center">
+                {/* Icon */}
+                <Box
                   sx={{
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    mb: 0.5,
-                    color: "#F50057",
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #FF2D55, #7000FF)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  Try adjusting:
-                </Typography>
+                  <FavoriteIcon sx={{ color: "#fff", fontSize: 30 }} />
+                </Box>
 
+                {/* Title */}
                 <Typography
-                  sx={{ fontSize: "13px", color: "rgba(255,255,255,0.7)" }}
+                  variant="h6"
+                  sx={{
+                    fontWeight: 800,
+                    letterSpacing: 0.3,
+                    fontSize: "1.2rem",
+                  }}
                 >
-                  • Max Distance / location
-                  <br />• Gender or partner preferences
+                  No more profiles right now
                 </Typography>
-              </Box>
 
-              <Button
-                variant="contained"
-                onClick={openPrefs}
-                sx={{
-                  mt: 2,
-                  px: 3,
-                  py: 1,
-                  color: "white",
-                  borderRadius: "999px",
-                  backgroundColor: "#F50057",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  "&:hover": {
-                    backgroundColor: "#c51162",
-                  },
-                }}
-              >
-                Adjust Preferences
-              </Button>
+                {/* Description */}
+                <Typography
+                  sx={{
+                    fontSize: "0.9rem",
+                    color: "rgba(255,255,255,0.75)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  You’ve seen everyone that matches your current preferences.
+                  Try adjusting them to discover more people.
+                </Typography>
 
-              <Typography
-                sx={{
-                  fontSize: "12px",
-                  color: "rgba(255,255,255,0.5)",
-                  mt: 0.5,
-                }}
-              >
-                Check back later for new matches ✨
-              </Typography>
+                {/* Suggestion card */}
+                <Box
+                  sx={{
+                    width: "100%",
+                    p: 1.6,
+                    borderRadius: "14px",
+                    background:
+                      "linear-gradient(135deg, rgba(112,0,255,0.14), rgba(255,45,85,0.08))",
+                    border: "1.5px solid rgba(155, 77, 255, 0.4)",
+                    textAlign: "left",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: "0.9rem",
+                      fontWeight: 700,
+                      color: "#9B4DFF",
+                      mb: 0.6,
+                    }}
+                  >
+                    Try adjusting:
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      fontSize: "0.85rem",
+                      color: "rgba(255,255,255,0.75)",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    • Max distance or location
+                    <br />• Gender or partner preferences
+                  </Typography>
+                </Box>
+
+                {/* Button */}
+                <Button
+                  fullWidth
+                  onClick={openPrefs}
+                  sx={{
+                    borderRadius: 3,
+                    fontWeight: 700,
+                    py: 1.2,
+                    background: "linear-gradient(90deg, #FF2D55, #7000FF)",
+                    color: "#fff",
+                    "&:hover": {
+                      opacity: 0.9,
+                    },
+                  }}
+                >
+                  Adjust Preferences
+                </Button>
+
+                {/* Footer text */}
+                <Typography
+                  sx={{
+                    fontSize: "0.75rem",
+                    color: "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  Check back later for new matches ✨
+                </Typography>
+              </Stack>
             </Box>
           </Box>
         )}
@@ -2014,6 +2045,7 @@ export default function MobileSweaping() {
       />
 
       {memberalarm && parseInt(memberalarm) > 2 ? null : <InstructionModal />}
+      {/* <InstructionModal /> */}
 
       {selectedUserId && (
         <UserProfileModal
@@ -2141,128 +2173,362 @@ export default function MobileSweaping() {
       <Dialog
         open={showLimitPopup}
         onClose={(event, reason) => {
-          if (reason === "backdropClick" || reason === "escapeKeyDown") {
-            return;
-          }
+          if (reason === "backdropClick" || reason === "escapeKeyDown") return;
           setShowLimitPopup(false);
         }}
+        BackdropProps={{ sx: { backdropFilter: "blur(6px)" } }}
         PaperProps={{
           sx: {
-            backgroundColor: "#121212",
-            color: "#ffffff",
+            width: "100%",
+            maxWidth: 380,
+            borderRadius: 4,
+            margin: 2,
+            p: 3,
+            background: "rgba(20, 10, 35, 0.95)",
+            backdropFilter: "blur(25px)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+            color: "#fff",
           },
         }}
       >
-        <DialogTitle sx={{ color: "#e91e63" }}>Daily Limit Reached</DialogTitle>
-        <DialogContent>
-          <Typography>
-            You've reached your daily limit of {DAILY_LIMIT} swipes. Upgrade
-            your membership to swipe more!
-          </Typography>
-          <Button
-            onClick={() => router.push(`/membership`)}
-            sx={{
-              mt: 2,
-              backgroundColor: "#e91e63",
-              color: "white",
-              "&:hover": {
-                backgroundColor: "#d81b60",
-              },
-            }}
-          >
-            Upgrade
-          </Button>
-          <Button
-            onClick={() => setShowLimitPopup(false)}
-            sx={{
-              mt: 2,
-              marginLeft: 1,
-              color: "white",
-              "&:hover": {
-                backgroundColor: "#d81b60",
-              },
-            }}
-          >
-            Close
-          </Button>
+        <DialogContent sx={{ p: 0 }}>
+          <Stack spacing={2.5} alignItems="center" textAlign="center">
+            {/* Icon */}
+            <Box
+              sx={{
+                width: 70,
+                height: 70,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #FF2D55, #7000FF)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <BoltIcon sx={{ color: "#fff", fontSize: 32 }} />
+            </Box>
+
+            {/* Title */}
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, fontSize: "1.1rem", letterSpacing: 0.3 }}
+            >
+              Daily Limit Reached
+            </Typography>
+
+            {/* Description */}
+            <Typography
+              sx={{
+                fontSize: "0.88rem",
+                color: "rgba(255,255,255,0.65)",
+                lineHeight: 1.6,
+                px: 1,
+              }}
+            >
+              You've reached your daily limit of{" "}
+              <Box component="span" sx={{ color: "#FF2D55", fontWeight: 700 }}>
+                {DAILY_LIMIT} swipes
+              </Box>
+              . Upgrade your membership to unlock unlimited swiping!
+            </Typography>
+
+            {/* Info box */}
+            <Box
+              sx={{
+                width: "100%",
+                p: 1.8,
+                borderRadius: "12px",
+                background: "rgba(255,45,85,0.08)",
+                border: "1px solid rgba(255,45,85,0.2)",
+                display: "flex",
+                gap: 1.5,
+                alignItems: "center",
+                textAlign: "left",
+              }}
+            >
+              {/* <CrownIcon
+                sx={{ color: "#FF2D55", fontSize: 20, flexShrink: 0 }}
+              /> */}
+              <Typography
+                sx={{
+                  fontSize: "0.8rem",
+                  color: "rgba(255,255,255,0.7)",
+                  lineHeight: 1.5,
+                }}
+              >
+                Premium members get{" "}
+                <strong style={{ color: "#fff" }}>unlimited swipes</strong>,
+                advanced filters, and more.
+              </Typography>
+            </Box>
+
+            {/* Buttons — same pattern as CustomDialog */}
+            <Stack direction="row" spacing={1.5} sx={{ width: "100%" }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => setShowLimitPopup(false)}
+                sx={{
+                  borderRadius: 3,
+                  fontWeight: 600,
+                  py: 1.2,
+                  textTransform: "none",
+                  borderColor: "rgba(255,255,255,0.2)",
+                  color: "rgba(255,255,255,0.7)",
+                  "&:hover": {
+                    borderColor: "#FF2D55",
+                    backgroundColor: "rgba(255,45,85,0.08)",
+                    color: "#fff",
+                  },
+                }}
+              >
+                Maybe Later
+              </Button>
+
+              <Button
+                fullWidth
+                onClick={() => router.push("/membership")}
+                sx={{
+                  borderRadius: 3,
+                  fontWeight: 700,
+                  py: 1.2,
+                  textTransform: "none",
+                  background: "linear-gradient(90deg, #FF2D55, #7000FF)",
+                  color: "#fff",
+                }}
+              >
+                Upgrade ✨
+              </Button>
+            </Stack>
+          </Stack>
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={showMatchPopup}
         onClose={() => setShowMatchPopup(false)}
+        BackdropProps={{ sx: { backdropFilter: "blur(6px)" } }}
         PaperProps={{
           sx: {
-            backgroundColor: "#121212",
-            color: "#ffffff",
+            width: "100%",
+            maxWidth: 380,
+            borderRadius: 4,
+            margin: 2,
+            p: 3,
+            background: "rgba(20, 10, 35, 0.95)",
+            backdropFilter: "blur(25px)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+            color: "#fff",
+            overflow: "hidden",
+            // Top shimmer
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "1px",
+              background:
+                "linear-gradient(90deg, transparent, rgba(255,107,157,0.6), transparent)",
+            },
           },
         }}
       >
-        <DialogTitle sx={{ color: "#03dac5" }}>It's a Match!</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: 0 }}>
           {matchedProfile && (
-            <Box textAlign="center">
-              <Avatar
-                src={matchedProfile.Avatar}
-                alt={matchedProfile.Username}
+            <Stack spacing={2.5} alignItems="center" textAlign="center">
+              {/* Matched avatars with heart */}
+              <Box sx={{ position: "relative", mt: 0.5 }}>
+                {/* Glow ring */}
+                <Box
+                  sx={{
+                    position: "absolute",
+                    inset: -10,
+                    borderRadius: "50%",
+                    background:
+                      "radial-gradient(circle, rgba(255,27,107,0.2) 0%, transparent 70%)",
+                    animation: "pulse 2s ease-in-out infinite",
+                    "@keyframes pulse": {
+                      "0%, 100%": { transform: "scale(1)", opacity: 0.5 },
+                      "50%": { transform: "scale(1.15)", opacity: 1 },
+                    },
+                  }}
+                />
+                <Avatar
+                  src={matchedProfile.Avatar}
+                  alt={matchedProfile.Username}
+                  sx={{
+                    width: 90,
+                    height: 90,
+                    border: "3px solid transparent",
+                    backgroundImage:
+                      "linear-gradient(rgba(20,10,35,1), rgba(20,10,35,1)), linear-gradient(135deg, #FF2D55, #7000FF)",
+                    backgroundOrigin: "border-box",
+                    backgroundClip: "padding-box, border-box",
+                  }}
+                />
+                {/* Heart badge */}
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: -4,
+                    right: -4,
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #FF2D55, #7000FF)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px solid rgba(20,10,35,1)",
+                    fontSize: 14,
+                  }}
+                >
+                  ❤️
+                </Box>
+              </Box>
+
+              {/* Title */}
+              <Box>
+                <Typography
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "1.3rem",
+                    background:
+                      "linear-gradient(135deg, #FFB6C1, #FF6B9D, #FF2D55)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    letterSpacing: 0.3,
+                    mb: 0.3,
+                  }}
+                >
+                  It's a Match! 🎉
+                </Typography>
+                <Typography
+                  sx={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.45)" }}
+                >
+                  You and{" "}
+                  <strong style={{ color: "rgba(255,255,255,0.8)" }}>
+                    {matchedProfile.Username}
+                  </strong>{" "}
+                  liked each other
+                </Typography>
+              </Box>
+
+              {/* Divider */}
+              <Box
                 sx={{
-                  width: 100,
-                  height: 100,
-                  margin: "auto",
-                  border: "2px solid #03dac5",
+                  width: "100%",
+                  height: "1px",
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,107,157,0.3), transparent)",
                 }}
               />
-              <Typography
-                sx={{ mt: 2 }}
-              >{`You've matched with ${matchedProfile.Username}!`}</Typography>
-              <Box display="flex" justifyContent="center" gap={2} mt={2}>
+
+              {/* Match info box */}
+              <Box
+                sx={{
+                  width: "100%",
+                  p: 1.8,
+                  borderRadius: "12px",
+                  background: "rgba(255,45,85,0.07)",
+                  border: "1px solid rgba(255,45,85,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  textAlign: "left",
+                }}
+              >
+                <FavoriteIcon
+                  sx={{ color: "#FF2D55", fontSize: 20, flexShrink: 0 }}
+                />
+                <Typography
+                  sx={{
+                    fontSize: "0.8rem",
+                    color: "rgba(255,255,255,0.65)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Start a conversation with{" "}
+                  <strong style={{ color: "#fff" }}>
+                    {matchedProfile.Username}
+                  </strong>{" "}
+                  or view their full profile.
+                </Typography>
+              </Box>
+
+              {/* Action buttons */}
+              <Stack direction="row" spacing={1.2} sx={{ width: "100%" }}>
                 <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => setShowMatchPopup(false)}
+                  sx={{
+                    borderRadius: "12px",
+                    fontWeight: 600,
+                    py: 1.1,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    borderColor: "rgba(255,255,255,0.15)",
+                    color: "rgba(255,255,255,0.6)",
+                    "&:hover": {
+                      borderColor: "#FF2D55",
+                      backgroundColor: "rgba(255,45,85,0.08)",
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  Keep Swiping
+                </Button>
+
+                <Button
+                  fullWidth
                   onClick={() => {
                     setShowDetail(true);
                     setSelectedUserId(matchedProfile?.Id);
                     window.history.pushState({}, "");
                   }}
-                  variant="contained"
                   sx={{
-                    backgroundColor: "#03dac5",
-                    color: "#121212",
+                    borderRadius: "12px",
+                    fontWeight: 700,
+                    py: 1.1,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    background: "rgba(255,255,255,0.08)",
+                    color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.12)",
                     "&:hover": {
-                      backgroundColor: "#00c4a7",
+                      background: "rgba(255,255,255,0.13)",
                     },
                   }}
                 >
                   View Profile
                 </Button>
+
                 <Button
+                  fullWidth
                   onClick={() => router.push(`/messaging/${id}`)}
-                  variant="contained"
                   sx={{
-                    backgroundColor: "#03dac5",
-                    color: "#121212",
+                    borderRadius: "12px",
+                    fontWeight: 700,
+                    py: 1.1,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    background: "linear-gradient(90deg, #FF2D55, #7000FF)",
+                    color: "#fff",
+                    boxShadow: "0 4px 16px rgba(255,45,85,0.3)",
                     "&:hover": {
-                      backgroundColor: "#00c4a7",
+                      opacity: 0.9,
+                      boxShadow: "0 6px 20px rgba(255,45,85,0.45)",
                     },
                   }}
                 >
                   Chat
                 </Button>
-
-                <Button
-                  onClick={() => setShowMatchPopup(false)}
-                  variant="outlined"
-                  sx={{
-                    color: "#03dac5",
-                    borderColor: "#03dac5",
-                    "&:hover": {
-                      borderColor: "#00c4a7",
-                      color: "#00c4a7",
-                    },
-                  }}
-                >
-                  Continue Swiping
-                </Button>
-              </Box>
-            </Box>
+              </Stack>
+            </Stack>
           )}
         </DialogContent>
       </Dialog>

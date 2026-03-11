@@ -21,9 +21,9 @@ import {
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
-import Swal from "sweetalert2";
 import MembershipCheckPageContent from "@/app/membership-check/page";
+import CustomDialog from "@/components/CustomDialog";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 type Params = Promise<{ id: string }>;
 
@@ -131,6 +131,13 @@ export default function Pricing({ params }: { params: Params }) {
   const [getAffCode, setGetAffCode] = useState<any>("");
   const [checkMemberShip, setCheckMembership] = useState<any>("");
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogAction, setDialogAction] = useState<"success" | "error" | null>(
+    null,
+  );
+
   useEffect(() => {
     setFullName(localStorage.getItem("fullName") || "");
     setUsername(localStorage.getItem("userName") || "");
@@ -173,10 +180,10 @@ export default function Pricing({ params }: { params: Params }) {
         billingCycle === "1"
           ? "$17.95"
           : billingCycle === "3"
-          ? "$39.95"
-          : billingCycle === "6"
-          ? "$69.95"
-          : "$129.95",
+            ? "$39.95"
+            : billingCycle === "6"
+              ? "$69.95"
+              : "$129.95",
       features: [
         "Browse & Search Members",
         "Browse & Search Events",
@@ -224,23 +231,17 @@ export default function Pricing({ params }: { params: Params }) {
 
   const handlePlanSelect = async (plan: string, price: string) => {
     setIsProcessing(true);
+
     try {
       if (plan === "Free") {
-        toast.success("Subscribed to Free plan!");
         await sendEmail(userName, email);
 
-        await Swal.fire({
-          title: "You're All Set!",
-          html: `
-          <p style="margin-bottom: 10px;">Your free plan has been activated successfully.</p>
-          <strong>You're now ready to explore the platform.</strong>
-        `,
-          icon: "success",
-          confirmButtonText: "Access Swingsocial",
-          confirmButtonColor: "#f50057",
-        });
-
-        await handleLogin(userName, password);
+        setDialogTitle("You're All Set!");
+        setDialogMessage(
+          "Your free plan has been activated successfully.\n\nYou're now ready to explore the platform.",
+        );
+        setDialogAction("success");
+        setDialogOpen(true);
       } else {
         localStorage.setItem("ssprice", price);
         localStorage.setItem("ssplan", plan);
@@ -248,7 +249,11 @@ export default function Pricing({ params }: { params: Params }) {
         router.push(`/plan/payment/${id}`);
       }
     } catch (error) {
-      toast.error("Something went wrong. Please try again.");
+      setDialogTitle("Something went wrong");
+      setDialogMessage("Please try again.");
+      setDialogAction("error");
+      setDialogOpen(true);
+
       console.error(error);
     } finally {
       setIsProcessing(false);
@@ -264,7 +269,7 @@ export default function Pricing({ params }: { params: Params }) {
   };
 
   const validateReferral = async (
-    code?: string | null
+    code?: string | null,
   ): Promise<ReferralValidationResult> => {
     if (!code) {
       console.log("No referral code provided — skipping validation.");
@@ -343,7 +348,24 @@ export default function Pricing({ params }: { params: Params }) {
     localStorage.setItem("profileUsername", data.currentuserName);
     localStorage.setItem("memberalarm", data.memberAlarm);
     localStorage.setItem("memberShip", data.memberShip);
-    localStorage.removeItem("password");
+
+    const registrationKeys = [
+      "password",
+      "email",
+      "userName",
+      "fullName",
+      "phone",
+      "Avatar",
+      "avatarS3Key",
+      "avatarS3Uploaded",
+      "selfieSkipped",
+      "register_profile_id",
+      "register_step1",
+      "register_step3",
+      `register_step5_${id}`,
+    ];
+
+    registrationKeys.forEach((key) => localStorage.removeItem(key));
     router.push("/home");
   };
 
@@ -393,23 +415,45 @@ export default function Pricing({ params }: { params: Params }) {
                 </Box>
               ) : (
                 <>
-                  <Tabs
-                    value={selectedTab}
-                    onChange={(_, value) => setSelectedTab(value)}
-                    centered
-                    variant={isMobile ? "fullWidth" : "standard"}
-                    textColor="secondary"
-                    indicatorColor="secondary"
-                  >
-                    <Tab
-                      label="Premium"
-                      sx={{ color: selectedTab === 0 ? "#f50057" : "#fff" }}
-                    />
-                    <Tab
-                      label="Free"
-                      sx={{ color: selectedTab === 1 ? "#f50057" : "#fff" }}
-                    />
-                  </Tabs>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 3 }}>
+                    <Button
+                      onClick={() => router.back()}
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        minWidth: 40,
+                        borderRadius: "50%",
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        color: "#fff",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        flexShrink: 0,
+                        "&:hover": { backgroundColor: "rgba(255,255,255,0.2)" },
+                      }}
+                    >
+                      <ArrowBackIcon fontSize="small" />
+                    </Button>
+
+                    <Tabs
+                      value={selectedTab}
+                      onChange={(_, value) => setSelectedTab(value)}
+                      centered
+                      variant={isMobile ? "fullWidth" : "standard"}
+                      textColor="secondary"
+                      indicatorColor="secondary"
+                      sx={{ flex: 1 }}
+                    >
+                      <Tab
+                        label="Premium"
+                        sx={{ color: selectedTab === 0 ? "#f50057" : "#fff" }}
+                      />
+                      <Tab
+                        label="Free"
+                        sx={{ color: selectedTab === 1 ? "#f50057" : "#fff" }}
+                      />
+                    </Tabs>
+                  </Box>
 
                   {selectedTab === 0 && (
                     <Box mt={3}>
@@ -587,6 +631,7 @@ export default function Pricing({ params }: { params: Params }) {
                               disabled={isProcessing}
                               sx={{
                                 mt: 3,
+                                color: "#fff",
                                 backgroundColor: "#f50057",
                                 "&:hover": {
                                   backgroundColor: "#c51162",
@@ -615,6 +660,22 @@ export default function Pricing({ params }: { params: Params }) {
           </Container>
         </Box>
       </ThemeProvider>
+
+      <CustomDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        description={dialogMessage}
+        confirmText={dialogAction === "success" ? "Access Swingsocial" : "OK"}
+        cancelText="Close"
+        onClose={() => setDialogOpen(false)}
+        onConfirm={async () => {
+          setDialogOpen(false);
+
+          if (dialogAction === "success") {
+            await handleLogin(userName, password);
+          }
+        }}
+      />
     </>
   );
 }

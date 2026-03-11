@@ -1,6 +1,13 @@
 "use client";
 
-import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Box,
   Button,
@@ -9,6 +16,7 @@ import {
   createTheme,
   Grid,
   IconButton,
+  LinearProgress,
   Paper,
   ThemeProvider,
   Typography,
@@ -16,7 +24,6 @@ import {
   Tooltip,
   DialogContent,
   Dialog,
-  Slider,
   DialogActions,
 } from "@mui/material";
 import { useFormik } from "formik";
@@ -29,8 +36,19 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useRouter } from "next/navigation";
 import Carousel from "@/commonPage/Carousel";
 import Cropper from "react-easy-crop";
+import Fade from "@mui/material/Fade";
+import heic2any from "heic2any";
 
 type Params = Promise<{ id: string }>;
+
+type PrivateImage = {
+  Id: string;
+  Url: string;
+  ProfileId: string;
+};
+
+// ── "deleting" added for delete spinner ──────────────────────────────────────
+type SlotUploadStatus = "idle" | "uploading" | "done" | "error" | "deleting";
 
 const MAX_PHOTOS = 6;
 
@@ -89,20 +107,49 @@ const ParticleField = memo(() => {
     </Box>
   );
 });
+ParticleField.displayName = "ParticleField";
 
-const page = ({ params }: { params: Params }) => {
+const PrivatePhotosPage = ({ params }: { params: Params }) => {
   const router = useRouter();
-  const [userId, setUserId] = useState<string>("");
 
-  const [cropModalOpen, setCropModalOpen] = useState(false);
+  // ── Ref: tracks per-slot cloud URL for submit polling ────────────────────
+  const slotUploadedUrlsRef = useRef<(string | null)[]>(
+    Array.from({ length: MAX_PHOTOS }, () => null),
+  );
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [userId, setUserId] = useState<string>("");
+  const [openCropper, setOpenCropper] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [imagesLoading, setImagesLoading] = useState(true);
+  const [dragOver, setDragOver] = useState(false);
 
+  // ── Parallel slot arrays ──────────────────────────────────────────────────
+  const [previews, setPreviews] = useState<(string | null)[]>(
+    Array.from({ length: MAX_PHOTOS }, () => null),
+  );
+  const [files, setFiles] = useState<(File | null)[]>(
+    Array.from({ length: MAX_PHOTOS }, () => null),
+  );
+  const [uploadedUrls, setUploadedUrls] = useState<(string | null)[]>(
+    Array.from({ length: MAX_PHOTOS }, () => null),
+  );
+  const [imageIds, setImageIds] = useState<(string | null)[]>(
+    Array.from({ length: MAX_PHOTOS }, () => null),
+  );
+  const [slotUploadStatus, setSlotUploadStatus] = useState<SlotUploadStatus[]>(
+    Array.from({ length: MAX_PHOTOS }, () => "idle"),
+  );
+
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const hasAnyPhoto = previews.some((p) => !!p);
+
+  // ── Resolve params ────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       const p = await params;
@@ -110,104 +157,127 @@ const page = ({ params }: { params: Params }) => {
     })();
   }, [params]);
 
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // ── Fetch existing private images ─────────────────────────────────────────
+  useEffect(() => {
+    if (!userId) return;
 
-  const [previews, setPreviews] = useState<(string | null)[]>(
-    Array.from({ length: MAX_PHOTOS }, () => null),
-  );
-  const [files, setFiles] = useState<(File | null)[]>(
-    Array.from({ length: MAX_PHOTOS }, () => null),
-  );
-  const [dragOver, setDragOver] = useState(false);
+    const getPrivateImages = async () => {
+      try {
+        const response = await fetch(`/api/user/sweeping/images?id=${userId}`);
+        const data = await response.json();
+        const images: PrivateImage[] = data?.images || [];
 
-  const getCroppedImg = (imageSrc: string, crop: any): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.src = imageSrc;
+        if (images.length === 0) return;
 
-      image.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return reject("Canvas error");
+        const newPreviews = Array.from({ length: MAX_PHOTOS }, () => null) as (
+          | string
+          | null
+        )[];
+        const newUrls = Array.from({ length: MAX_PHOTOS }, () => null) as (
+          | string
+          | null
+        )[];
+        const newIds = Array.from({ length: MAX_PHOTOS }, () => null) as (
+          | string
+          | null
+        )[];
 
-        // 🔥 FORCE 4:5 OUTPUT
-        const TARGET_WIDTH = 800;
-        const TARGET_HEIGHT = 1000;
+        images.slice(0, MAX_PHOTOS).forEach((img, i) => {
+          newPreviews[i] = img.Url;
+          newUrls[i] = img.Url;
+          newIds[i] = img.Id;
+        });
 
-        canvas.width = TARGET_WIDTH;
-        canvas.height = TARGET_HEIGHT;
+        setPreviews(newPreviews);
+        setUploadedUrls(newUrls);
+        setImageIds(newIds);
 
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-
-        ctx.drawImage(
-          image,
-          crop.x,
-          crop.y,
-          crop.width,
-          crop.height,
-          0,
-          0,
-          TARGET_WIDTH,
-          TARGET_HEIGHT,
-        );
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return reject("Blob error");
-
-            resolve(
-              new File([blob], "cropped.jpg", {
-                type: "image/jpeg",
-              }),
-            );
-          },
-          "image/jpeg",
-          0.95,
-        );
-      };
-
-      image.onerror = reject;
-    });
-  };
-
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file, `${Date.now()}-${file.name}`);
-
-    const res = await fetch("/api/user/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    const result = await res.json();
-    if (!result.blobUrl) {
-      throw new Error("Upload failed");
-    }
-    return result.blobUrl;
-  };
-
-  const uploadPrivateImage = async (imageUrl: string) => {
-    try {
-      const response = await fetch("/api/user/profile/update/private-images", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          pid: userId,
-          image: imageUrl,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to save image reference");
+        // ✅ Mark fetched slots as done so submit polling skips them
+        setSlotUploadStatus((prev) => {
+          const next = [...prev];
+          images.slice(0, MAX_PHOTOS).forEach((_, i) => {
+            next[i] = "done";
+          });
+          return next;
+        });
+      } catch (error) {
+        console.error("Error fetching private images:", error);
+      } finally {
+        setImagesLoading(false);
       }
-    } catch (error) {
-      console.error("Error saving private image:", error);
-      throw error;
+    };
+
+    getPrivateImages();
+  }, [userId]);
+
+  // ── Cloudinary upload ─────────────────────────────────────────────────────
+  const uploadToCloudinary = async (blob: Blob): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", blob);
+    formData.append("upload_preset", "dating_unsigned");
+    formData.append("folder", "dating-app/private-photos");
+
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/dkkf79biv/image/upload",
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+    if (!res.ok) throw new Error("Cloudinary upload failed");
+
+    const data = await res.json();
+    return data.secure_url.replace(
+      "/upload/",
+      "/upload/w_800,h_1000,c_fill,q_auto,f_auto/",
+    );
+  };
+
+  const saveImageToDb = async (imageUrl: string) => {
+    const response = await fetch("/api/user/profile/update/private-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pid: userId, image: imageUrl }),
+    });
+    if (!response.ok) throw new Error("Failed to save image reference");
+  };
+
+  // ── Background upload per slot (fires after crop confirm) ────────────────
+  const runBackgroundUpload = async (blob: Blob, slotIndex: number) => {
+    setSlotUploadStatus((prev) => {
+      const next = [...prev];
+      next[slotIndex] = "uploading";
+      return next;
+    });
+
+    try {
+      const cloudUrl = await uploadToCloudinary(blob);
+      await saveImageToDb(cloudUrl);
+
+      slotUploadedUrlsRef.current[slotIndex] = cloudUrl;
+
+      setUploadedUrls((prev) => {
+        const next = [...prev];
+        next[slotIndex] = cloudUrl;
+        return next;
+      });
+
+      setSlotUploadStatus((prev) => {
+        const next = [...prev];
+        next[slotIndex] = "done";
+        return next;
+      });
+    } catch (err) {
+      console.error(`Background upload failed for slot ${slotIndex}:`, err);
+      setSlotUploadStatus((prev) => {
+        const next = [...prev];
+        next[slotIndex] = "error";
+        return next;
+      });
     }
   };
 
+  // ── Formik — submit just polls then navigates ─────────────────────────────
   const formik = useFormik({
     initialValues: { photos: [] as File[] },
     validationSchema: Yup.object().shape({
@@ -215,130 +285,278 @@ const page = ({ params }: { params: Params }) => {
         .of(Yup.mixed<File>())
         .max(MAX_PHOTOS, `You can upload up to ${MAX_PHOTOS} photos`),
     }),
-    onSubmit: async (values, { setSubmitting, setFieldError }) => {
+    onSubmit: async (_, { setSubmitting, setFieldError }) => {
       try {
-        const uploadedUrls: string[] = [];
+        // Poll any slots still uploading
+        const uploadingSlots = slotUploadStatus
+          .map((status, i) => ({ status, i }))
+          .filter(({ status }) => status === "uploading");
 
-        if (values?.photos?.length > 0) {
-          for (let i = 0; i < values?.photos?.length; i++) {
-            const f = values.photos[i];
-            setUploadProgress(i + 1);
-            const url = await uploadImage(f);
-            await uploadPrivateImage(url);
-            uploadedUrls.push(url);
-          }
-
-          if (uploadedUrls.length === 0) {
-            setFieldError("photos", "Image upload failed. Try again.");
-            return;
-          }
+        if (uploadingSlots.length > 0) {
+          await Promise.all(
+            uploadingSlots.map(
+              ({ i }) =>
+                new Promise<void>((resolve, reject) => {
+                  let attempts = 0;
+                  const interval = setInterval(() => {
+                    attempts++;
+                    if (slotUploadedUrlsRef.current[i]) {
+                      clearInterval(interval);
+                      resolve();
+                    } else if (attempts > 100) {
+                      clearInterval(interval);
+                      reject(new Error(`Slot ${i} upload timed out`));
+                    }
+                  }, 300);
+                }),
+            ),
+          );
         }
+
+        const hasErrors = slotUploadStatus.some((s) => s === "error");
+        if (hasErrors) {
+          setFieldError(
+            "photos",
+            "Some photos failed to upload. Please remove and re-add them.",
+          );
+          return;
+        }
+
+        // ✅ Private photos are optional — always navigate
         await router.push(`/about/${userId}`);
       } catch (e) {
-        console.error("Error in upload flow:", e);
-        setFieldError("photos", "Something went wrong during upload.");
+        console.error("Submit failed:", e);
+        setFieldError("photos", "Something went wrong. Please try again.");
       } finally {
         setSubmitting(false);
-        setUploadProgress(0);
       }
     },
   });
 
+  // ── Slot helpers ──────────────────────────────────────────────────────────
   const firstEmptyIndex = () => previews.findIndex((p) => !p);
-
-  const validateAndUseFiles = (incoming: File[], targetIndex?: number) => {
-    const newPreviews = [...previews];
-    const newFiles = [...files];
-    let idx = typeof targetIndex === "number" ? targetIndex : firstEmptyIndex();
-
-    for (const f of incoming) {
-      if (!f.type.startsWith("image/")) continue;
-      if (idx < 0 || idx >= MAX_PHOTOS) break;
-
-      if (newPreviews[idx]) URL.revokeObjectURL(newPreviews[idx]!);
-      const url = URL.createObjectURL(f);
-      newPreviews[idx] = url;
-      newFiles[idx] = f;
-
-      const next = newPreviews.findIndex((p, i) => !p && i > idx);
-      idx = next === -1 ? MAX_PHOTOS : next;
-    }
-
-    setPreviews(newPreviews);
-    setFiles(newFiles);
-    formik.setFieldValue(
-      "photos",
-      newFiles.filter((x): x is File => !!x),
-    );
-  };
 
   const onTilePick = (i: number) => inputRefs.current[i]?.click();
 
-  const onTileChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── HEIC conversion + open cropper ───────────────────────────────────────
+  const processAndOpenCropper = useCallback(
+    async (rawFile: File, slotIndex: number) => {
+      let file = rawFile;
+      try {
+        if (
+          file.type === "image/heic" ||
+          file.type === "image/heif" ||
+          file.name.toLowerCase().endsWith(".heic") ||
+          file.name.toLowerCase().endsWith(".heif")
+        ) {
+          const converted = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.95,
+          });
+          const blob = Array.isArray(converted) ? converted[0] : converted;
+          file = new File(
+            [blob],
+            file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+            { type: "image/jpeg" },
+          );
+        }
+
+        const downscaled = await downscaleImage(file);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
+        setSelectedFile(downscaled);
+        setCropImageUrl(URL.createObjectURL(downscaled));
+        setSelectedIndex(slotIndex);
+        setOpenCropper(true);
+      } catch (error) {
+        console.error("File processing failed:", error);
+      }
+    },
+    [],
+  );
+
+  const onTileChange = async (
+    i: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const fl = e.target.files ? Array.from(e.target.files) : [];
     if (!fl.length) return;
-
-    setSelectedFile(fl[0]);
-    setSelectedIndex(i);
-    setCropModalOpen(true);
-
+    await processAndOpenCropper(fl[0], i);
     e.target.value = "";
   };
 
-  const handleCropDone = async () => {
-    if (!selectedFile || !croppedAreaPixels || selectedIndex === null) return;
-    const previewUrl = URL.createObjectURL(selectedFile);
+  // ── Crop confirm — close immediately, upload in background ───────────────
+  const onCropComplete = (_: any, area: any) => setCroppedAreaPixels(area);
+
+  const handleCropConfirm = async () => {
+    if (!croppedAreaPixels || !selectedFile || selectedIndex === null) return;
 
     try {
-      const croppedFile = await getCroppedImg(previewUrl, croppedAreaPixels);
-      validateAndUseFiles([croppedFile], selectedIndex);
-    } catch (e) {
-      console.error("Crop failed", e);
-    } finally {
-      setCropModalOpen(false);
+      const imageBitmap = await createImageBitmap(selectedFile);
+      const { x, y, width, height } = croppedAreaPixels;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 1000;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas context unavailable");
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(imageBitmap, x, y, width, height, 0, 0, 800, 1000);
+
+      const blob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject("Blob creation failed")),
+          "image/jpeg",
+          0.85,
+        );
+      });
+
+      // ✅ Show preview immediately
+      const previewUrl = URL.createObjectURL(blob);
+      const newPreviews = [...previews];
+      newPreviews[selectedIndex] = previewUrl;
+      setPreviews(newPreviews);
+
+      // ✅ Close dialog immediately
+      if (cropImageUrl) URL.revokeObjectURL(cropImageUrl);
+      setCropImageUrl(null);
       setSelectedFile(null);
+      const capturedIndex = selectedIndex;
       setSelectedIndex(null);
+      setOpenCropper(false);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+
+      // 🔥 Fire and forget
+      runBackgroundUpload(blob, capturedIndex);
+    } catch (err) {
+      console.error("Crop failed:", err);
     }
   };
 
-  const onRemove = (i: number) => {
+  const downscaleImage = async (file: File): Promise<File> => {
+    const img = await createImageBitmap(file);
+    const scale = Math.min(1, 1200 / img.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => resolve(new File([blob!], file.name, { type: "image/jpeg" })),
+        "image/jpeg",
+        0.95,
+      );
+    });
+  };
+
+  // ── Delete with spinner ───────────────────────────────────────────────────
+  const onRemove = async (i: number) => {
+    const imageId = imageIds[i];
+    const isServer = !!uploadedUrls[i] && !!imageId;
+
+    if (isServer) {
+      setSlotUploadStatus((prev) => {
+        const next = [...prev];
+        next[i] = "deleting";
+        return next;
+      });
+
+      try {
+        const response = await fetch(
+          "/api/user/profile/update/images/private/delete",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId: userId, imageId }),
+          },
+        );
+        const data = await response.json();
+        if (data.status !== 200) {
+          console.error("Delete failed:", data);
+          setSlotUploadStatus((prev) => {
+            const next = [...prev];
+            next[i] = "done";
+            return next;
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Error deleting image:", error);
+        setSlotUploadStatus((prev) => {
+          const next = [...prev];
+          next[i] = "done";
+          return next;
+        });
+        return;
+      }
+    }
+
     const newPreviews = [...previews];
     const newFiles = [...files];
-    if (newPreviews[i]) URL.revokeObjectURL(newPreviews[i]!);
+    const newUrls = [...uploadedUrls];
+    const newIds = [...imageIds];
+
+    if (newPreviews[i]?.startsWith("blob:"))
+      URL.revokeObjectURL(newPreviews[i]!);
+
     newPreviews[i] = null;
     newFiles[i] = null;
+    newUrls[i] = null;
+    newIds[i] = null;
+    slotUploadedUrlsRef.current[i] = null;
+
     setPreviews(newPreviews);
     setFiles(newFiles);
+    setUploadedUrls(newUrls);
+    setImageIds(newIds);
+    setSlotUploadStatus((prev) => {
+      const next = [...prev];
+      next[i] = "idle";
+      return next;
+    });
     formik.setFieldValue(
       "photos",
       newFiles.filter((x): x is File => !!x),
     );
   };
 
-  const onDrop = (e: React.DragEvent) => {
+  // ── Drag & drop ───────────────────────────────────────────────────────────
+  const onDropWrapper = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const fl = Array.from(e.dataTransfer.files || []);
     if (!fl.length) return;
-    validateAndUseFiles(fl);
+    const idx = firstEmptyIndex();
+    if (idx === -1) return;
+    await processAndOpenCropper(fl[0], idx);
   };
 
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(true);
   };
-
   const onDragLeave = () => setDragOver(false);
 
+  // ── Tile ──────────────────────────────────────────────────────────────────
   const Tile = ({ i, showAddBadge }: { i: number; showAddBadge?: boolean }) => {
     const hasPhoto = !!previews[i];
+    const isProcessing =
+      slotUploadStatus[i] === "uploading" || slotUploadStatus[i] === "deleting";
+
     return (
       <Box
         role="button"
-        onClick={() => onTilePick(i)}
+        onClick={() => !isProcessing && onTilePick(i)}
         sx={{
           width: "100%",
-          aspectRatio: "4 / 5", // 🔥 MATCH CROP
+          aspectRatio: "4 / 5",
           border: "2px dashed rgba(255,255,255,0.7)",
           borderRadius: 3,
           backgroundColor: "#1d1d1d",
@@ -346,9 +564,9 @@ const page = ({ params }: { params: Params }) => {
           overflow: "hidden",
           display: "grid",
           placeItems: "center",
-          cursor: "pointer",
+          cursor: isProcessing ? "default" : "pointer",
           transition: "transform 0.15s ease",
-          "&:hover": { transform: "scale(1.02)" },
+          "&:hover": { transform: isProcessing ? "none" : "scale(1.02)" },
         }}
       >
         {!hasPhoto ? (
@@ -371,9 +589,10 @@ const page = ({ params }: { params: Params }) => {
           </Box>
         ) : (
           <>
+            {/* 1️⃣ Image */}
             <img
               src={previews[i] as string}
-              alt={`public-photo-${i + 1}`}
+              alt={`private-photo-${i + 1}`}
               style={{
                 position: "absolute",
                 inset: 0,
@@ -382,47 +601,122 @@ const page = ({ params }: { params: Params }) => {
                 objectFit: "cover",
               }}
             />
-            <Box
-              sx={{
-                position: "absolute",
-                right: 6,
-                bottom: 6,
-                display: "flex",
-                gap: 0.5,
-              }}
-            >
-              <Tooltip title="Replace">
-                <IconButton
-                  size="small"
-                  sx={{ bgcolor: "rgba(0,0,0,0.6)", color: "#fff" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTilePick(i);
-                  }}
+
+            {/* 2️⃣ Uploading overlay */}
+            {slotUploadStatus[i] === "uploading" && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundColor: "rgba(0,0,0,0.45)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                  zIndex: 1,
+                }}
+              >
+                <CircularProgress size={28} sx={{ color: "#FF2D55" }} />
+                <Typography
+                  sx={{ color: "#fff", fontSize: "0.6rem", fontWeight: 600 }}
                 >
-                  <EditOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Remove">
-                <IconButton
-                  size="small"
-                  sx={{ bgcolor: "rgba(0,0,0,0.6)", color: "#fff" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove(i);
-                  }}
+                  Uploading...
+                </Typography>
+              </Box>
+            )}
+
+            {/* 3️⃣ Deleting overlay */}
+            {slotUploadStatus[i] === "deleting" && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundColor: "rgba(0,0,0,0.55)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                  zIndex: 1,
+                }}
+              >
+                <CircularProgress size={28} sx={{ color: "#FF2D55" }} />
+                <Typography
+                  sx={{ color: "#fff", fontSize: "0.6rem", fontWeight: 600 }}
                 >
-                  <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
+                  Deleting...
+                </Typography>
+              </Box>
+            )}
+
+            {/* 4️⃣ Error banner */}
+            {slotUploadStatus[i] === "error" && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "rgba(255,45,85,0.85)",
+                  py: 0.5,
+                  textAlign: "center",
+                  zIndex: 1,
+                }}
+              >
+                <Typography
+                  sx={{ color: "#fff", fontSize: "0.65rem", fontWeight: 700 }}
+                >
+                  ✕ Upload failed
+                </Typography>
+              </Box>
+            )}
+
+            {/* 5️⃣ Action buttons — hidden while processing */}
+            {!isProcessing && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 6,
+                  bottom: 6,
+                  display: "flex",
+                  gap: 0.5,
+                  zIndex: 2,
+                }}
+              >
+                <Tooltip title="Replace">
+                  <IconButton
+                    size="small"
+                    sx={{ bgcolor: "rgba(0,0,0,0.6)", color: "#fff" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTilePick(i);
+                    }}
+                  >
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Remove">
+                  <IconButton
+                    size="small"
+                    sx={{ bgcolor: "rgba(0,0,0,0.6)", color: "#fff" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(i);
+                    }}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
           </>
         )}
 
         <input
           ref={(el: any) => (inputRefs.current[i] = el)}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           onChange={(e) => onTileChange(i, e)}
           style={{ display: "none" }}
         />
@@ -432,7 +726,8 @@ const page = ({ params }: { params: Params }) => {
 
   const firstEmpty = firstEmptyIndex();
   const showAddBadgeIndex = firstEmpty === -1 ? undefined : firstEmpty;
-  const isUploading = formik.isSubmitting;
+  const isSubmitting = formik.isSubmitting;
+  const anyUploading = slotUploadStatus.some((s) => s === "uploading");
 
   return (
     <ThemeProvider theme={theme}>
@@ -471,7 +766,6 @@ const page = ({ params }: { params: Params }) => {
                     color: "#c2185b",
                     fontWeight: "bold",
                     textAlign: "center",
-                    textShadow: "0 1px 3px rgba(0,0,0,0.5)",
                     mb: { xs: 2, sm: 3 },
                   }}
                 >
@@ -480,6 +774,7 @@ const page = ({ params }: { params: Params }) => {
                     (Optional)
                   </Typography>
                 </Typography>
+
                 <Typography
                   sx={{
                     textAlign: "center",
@@ -490,12 +785,11 @@ const page = ({ params }: { params: Params }) => {
                   }}
                 >
                   You can post private pics here. Only users you give access
-                  will be able to see these - so anything goes!
+                  will be able to see these — so anything goes!
                 </Typography>
 
-                {/* Drag & Drop wrapper */}
                 <Box
-                  onDrop={onDrop}
+                  onDrop={onDropWrapper}
                   onDragOver={onDragOver}
                   onDragLeave={onDragLeave}
                   sx={{
@@ -559,41 +853,52 @@ const page = ({ params }: { params: Params }) => {
                 <Grid
                   item
                   xs={12}
-                  sx={{ textAlign: "center", mt: { xs: 2.5, sm: 3 } }}
+                  sx={{
+                    textAlign: "center",
+                    mt: 2,
+                    mb: 2,
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
                 >
                   <Button
-                    type="submit"
-                    disabled={isUploading}
+                    onClick={() => router.back()}
+                    disabled={isSubmitting}
                     sx={{
-                      width: { xs: 52, sm: 56 },
-                      height: { xs: 52, sm: 56 },
+                      width: 56,
+                      height: 56,
+                      minWidth: 56,
                       borderRadius: "50%",
-                      backgroundColor: "#FF2D55",
+                      backgroundColor: "rgba(255,255,255,0.1)",
                       color: "#fff",
-                      "&:hover": { backgroundColor: "#CC1439" },
-                      position: "relative",
+                      mr: 2,
+                      "&:hover": { backgroundColor: "rgba(255,255,255,0.2)" },
                     }}
                   >
-                    {isUploading ? (
+                    <ArrowBackIcon />
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      minWidth: 56,
+                      borderRadius: "50%",
+                      backgroundColor: "#c2185b",
+                      color: "#fff",
+                      "&:hover": { backgroundColor: "#ad1457" },
+                      "&.Mui-disabled": {
+                        backgroundColor: "rgba(194,24,91,0.3)",
+                      },
+                    }}
+                  >
+                    {isSubmitting ? (
                       <CircularProgress size={24} sx={{ color: "#fff" }} />
                     ) : (
                       <ArrowForwardIosIcon />
                     )}
                   </Button>
-                  {isUploading && (
-                    <Typography
-                      sx={{
-                        mt: 2,
-                        textAlign: "center",
-                        color: "#fff",
-                        fontSize: { xs: "0.85rem", sm: "0.95rem" },
-                        fontWeight: 500,
-                      }}
-                    >
-                      Uploading {uploadProgress} of{" "}
-                      {formik.values.photos.length}
-                    </Typography>
-                  )}
                 </Grid>
 
                 <Box sx={{ mt: { xs: 3, sm: 4 } }}>
@@ -605,56 +910,74 @@ const page = ({ params }: { params: Params }) => {
         </Container>
       </Box>
 
+      {/* ── Crop Dialog ── */}
       <Dialog
-        open={cropModalOpen}
-        onClose={() => setCropModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: "#121212",
-            color: "#fff",
-            borderRadius: 3,
-            overflow: "hidden",
-          },
+        open={openCropper}
+        onClose={() => {
+          if (cropImageUrl) URL.revokeObjectURL(cropImageUrl);
+          setCropImageUrl(null);
+          setOpenCropper(false);
+          setCrop({ x: 0, y: 0 });
+          setZoom(1);
         }}
+        TransitionComponent={Fade}
       >
         <DialogContent
-          sx={{ position: "relative", height: 500, bgcolor: "#000" }}
-        >
-          {selectedFile && (
-            <Cropper
-              image={URL.createObjectURL(selectedFile)}
-              crop={crop}
-              zoom={zoom}
-              aspect={4 / 5}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={(_, croppedAreaPixels) =>
-                setCroppedAreaPixels(croppedAreaPixels)
-              }
-              cropShape="rect"
-              showGrid={false}
-            />
-          )}
-        </DialogContent>
-
-        <DialogActions
           sx={{
-            backgroundColor: "#121212",
-            justifyContent: "center",
-            p: 2,
+            backgroundColor: "#000",
+            color: "#fff",
+            width: { xs: "300px", sm: "400px" },
+            height: { xs: "375px", sm: "500px" },
+            position: "relative",
+            padding: 0,
           }}
         >
+          <Cropper
+            key={cropImageUrl}
+            image={cropImageUrl || undefined}
+            crop={crop}
+            zoom={zoom}
+            aspect={4 / 5}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            zoomSpeed={0.1}
+            restrictPosition={false}
+          />
+        </DialogContent>
+        <DialogActions
+          sx={{ backgroundColor: "#121212", justifyContent: "center", p: 2 }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => {
+              if (cropImageUrl) URL.revokeObjectURL(cropImageUrl);
+              setCropImageUrl(null);
+              setOpenCropper(false);
+              setCrop({ x: 0, y: 0 });
+              setZoom(1);
+            }}
+            sx={{
+              color: "#fff",
+              borderColor: "rgba(255,255,255,0.3)",
+              "&:hover": {
+                borderColor: "#fff",
+                backgroundColor: "rgba(255,255,255,0.1)",
+              },
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
-            onClick={handleCropDone}
+            onClick={handleCropConfirm}
             sx={{
               backgroundColor: "#c2185b",
               "&:hover": { backgroundColor: "#ad1457" },
+              ml: 1,
             }}
           >
-            Crop
+            Crop & Add
           </Button>
         </DialogActions>
       </Dialog>
@@ -662,4 +985,4 @@ const page = ({ params }: { params: Params }) => {
   );
 };
 
-export default page;
+export default PrivatePhotosPage;

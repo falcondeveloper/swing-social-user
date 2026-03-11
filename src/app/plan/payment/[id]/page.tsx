@@ -11,10 +11,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
+  Stack,
 } from "@mui/material";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import { useRouter } from "next/navigation";
 import PaymentDialog, { DialogType } from "@/components/PaymentDialog";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CloseIcon from "@mui/icons-material/Close";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import Divider from "@mui/material/Divider";
 
 type Params = Promise<{ id: string }>;
 
@@ -63,24 +70,21 @@ export default function Payment(props: { params: Params }) {
     qcountry: "",
     phone: "",
   });
+  const [apiErrorMessage, setApiErrorMessage] = useState<string>("");
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("");
+  const [dialogDescription, setDialogDescription] = useState("");
+  const [confirmText, setConfirmText] = useState("OK");
+  const [cancelText, setCancelText] = useState("Cancel");
+  const [dialogConfirmAction, setDialogConfirmAction] = useState<
+    (() => void) | null
+  >(null);
+  const [showCancelButton, setShowCancelButton] = useState(true);
+  const [dialogPlanName, setDialogPlanName] = useState("");
+  const [dialogPlanPrice, setDialogPlanPrice] = useState("");
+  const [dialogBillingCycle, setDialogBillingCycle] = useState("");
   const [errors, setErrors] = useState<any>({});
-
-  const [dialogState, setDialogState] = useState<{
-    open: boolean;
-    type: DialogType;
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  }>({
-    open: false,
-    type: "success",
-    title: "",
-    message: "",
-  });
 
   useEffect(() => {
     const getIdFromParam = async () => {
@@ -400,10 +404,8 @@ export default function Payment(props: { params: Params }) {
       console.log("Error : please check it out");
     }
     const { user: advertiserData } = await response.json();
-    console.log(advertiserData);
     const [city, userState] = advertiserData.Location.split(", ");
     setState(userState);
-    console.log(userState);
     const result = await fetch("/api/user/promostate", {
       method: "POST",
       headers: {
@@ -511,54 +513,74 @@ export default function Payment(props: { params: Params }) {
               await handleUpdateMembershipStatus(id, pprice);
             }
             setOpen(false);
-            setDialogState({
-              open: true,
-              type: "success",
-              title: `Thank you ${userName}!`,
-              message: "You will now be directed to Swing Social soon!",
-              confirmText: "Continue",
-              onConfirm: () => {
-                setDialogState((prev) => ({ ...prev, open: false }));
-                handleLogin(userName, password);
-              },
+
+            setDialogTitle(`Thank you ${userName}!`);
+            setDialogDescription(
+              "Your premium membership is now active. Welcome to the community!",
+            );
+            setConfirmText("Continue");
+            setCancelText("Close");
+
+            setDialogConfirmAction(() => async () => {
+              await handleLogin(userName, password);
             });
+            setShowCancelButton(false);
+            setDialogPlanName(planName);
+            setDialogPlanPrice(pprice);
+            setDialogBillingCycle(
+              ssunit == "1"
+                ? "Monthly"
+                : ssunit == "12"
+                  ? "Annually"
+                  : ssunit == "3"
+                    ? "Quarterly"
+                    : "Bi-Annually",
+            );
+            setDialogOpen(true);
           } else {
             setOpen(false);
-            setDialogState({
-              open: true,
-              type: "error",
-              title: "Payment Failed",
-              message: "Sorry, we are unable to process your payment.",
-              confirmText: "Edit Card",
-              cancelText: "Continue as Free Member",
-              onConfirm: () => {
-                setDialogState((prev) => ({ ...prev, open: false }));
-                setOpen(true);
-              },
-              onCancel: () => {
-                setDialogState((prev) => ({ ...prev, open: false }));
-                handleLogin(userName, password);
-              },
+            setDialogTitle("Payment Failed");
+            setDialogDescription(
+              data.message || "Sorry, we are unable to process your payment.",
+            );
+            setConfirmText("Edit Card");
+            setCancelText("Continue as Free Member");
+            setShowCancelButton(false);
+
+            setDialogConfirmAction(() => () => {
+              setOpen(true); // reopen card dialog
             });
+
+            setDialogOpen(true);
           }
         }
       } catch (error) {
         console.error("Error submitting form:", error);
         setOpen(false);
-        setDialogState({
-          open: true,
-          type: "error",
-          title: "Unexpected Error",
-          message: "An unexpected error occurred. Please try again.",
-          confirmText: "OK",
-          onConfirm: () => {
-            setDialogState((prev) => ({ ...prev, open: false }));
-          },
+
+        setDialogTitle("Unexpected Error");
+        setDialogDescription(
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred. Please try again.",
+        );
+        setConfirmText("OK");
+        setCancelText("Close");
+
+        setDialogConfirmAction(() => () => {
+          setDialogOpen(false);
         });
+
+        setDialogOpen(true);
       } finally {
         setIsProcessing(false);
       }
     }
+  };
+
+  const handleDialogClose = async () => {
+    setDialogOpen(false);
+    // await handleLogin(userName, password);
   };
 
   const handleInputChange = (e: any) => {
@@ -617,16 +639,45 @@ export default function Payment(props: { params: Params }) {
           width: "100%",
           maxWidth: 800,
           margin: "auto",
-          mt: 5,
-          p: 3,
+          p: 2,
           borderRadius: 2,
           backgroundColor: "#000",
           color: "#fff",
         }}
       >
-        <Typography variant="h5" mb={2} align="center">
-          Payment Details
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 4,
+            gap: 2,
+          }}
+        >
+          <Button
+            onClick={() => router.back()}
+            sx={{
+              width: 40,
+              height: 40,
+              minWidth: 40,
+              borderRadius: "50%",
+              backgroundColor: "rgba(255,255,255,0.1)",
+              color: "#fff",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              flexShrink: 0,
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.2)" },
+            }}
+          >
+            <ArrowBackIcon fontSize="small" />
+          </Button>
+          <Typography variant="h5" align="center">
+            Payment Details
+          </Typography>
+          <Box sx={{ width: 40 }} />
+        </Box>
+
         <Typography variant="h6" mb={3} align="center">
           Payment for {plan} Subscription
         </Typography>
@@ -964,16 +1015,280 @@ export default function Payment(props: { params: Params }) {
         </DialogActions>
       </Dialog>
 
-      <PaymentDialog
-        open={dialogState.open}
-        type={dialogState.type}
-        title={dialogState.title}
-        message={dialogState.message}
-        confirmText={dialogState.confirmText}
-        cancelText={dialogState.cancelText}
-        onConfirm={dialogState.onConfirm}
-        onCancel={dialogState.onCancel}
-      />
+      <Dialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        BackdropProps={{
+          sx: { backdropFilter: "blur(6px)" },
+        }}
+        PaperProps={{
+          sx: {
+            width: "100%",
+            margin: "20px !important",
+            maxWidth: 380,
+            borderRadius: 4,
+            p: 2,
+            maxHeight: "90vh",
+            background: "rgba(20, 10, 35, 0.92)",
+            backdropFilter: "blur(25px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+            color: "#fff",
+            position: "relative",
+            overflowY: "auto",
+            "&::-webkit-scrollbar": { display: "none" },
+            scrollbarWidth: "none",
+          },
+        }}
+      >
+        {/* Confetti dots background */}
+        {dialogTitle.startsWith("Thank") && (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              overflow: "hidden",
+            }}
+          >
+            {[...Array(18)].map((_, i) => (
+              <Box
+                key={i}
+                sx={{
+                  position: "absolute",
+                  width: i % 3 === 0 ? 8 : 5,
+                  height: i % 3 === 0 ? 8 : 5,
+                  borderRadius: "50%",
+                  background: [
+                    "#FF2D55",
+                    "#7000FF",
+                    "#FFD700",
+                    "#00E5FF",
+                    "#FF6B35",
+                  ][i % 5],
+                  top: `${Math.random() * 100}%`,
+                  left: `${(i / 18) * 100}%`,
+                  opacity: 0.7,
+                  animation: `float${i % 3} 3s ease-in-out infinite`,
+                  animationDelay: `${i * 0.2}s`,
+                }}
+              />
+            ))}
+          </Box>
+        )}
+
+        <DialogContent
+          sx={{
+            textAlign: "center",
+            p: "0 !important",
+            position: "relative",
+            zIndex: 1,
+            overflow: "visible",
+          }}
+        >
+          {/* {!dialogTitle.startsWith("Thank") && (
+            <IconButton
+              onClick={handleDialogClose}
+              sx={{
+                position: "absolute",
+                right: -8,
+                top: -8,
+                color: "rgba(255,255,255,0.5)",
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )} */}
+
+          <Stack spacing={2.5} alignItems="center">
+            {/* Icon */}
+            <Box
+              sx={{
+                width: 70,
+                height: 70,
+                borderRadius: "50%",
+                background: dialogTitle.startsWith("Thank")
+                  ? "linear-gradient(135deg, #FF2D55, #7000FF)"
+                  : "linear-gradient(135deg, #f44336, #b71c1c)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {dialogTitle.startsWith("Thank") ? (
+                <WorkspacePremiumIcon sx={{ color: "#fff", fontSize: 38 }} />
+              ) : (
+                <CreditCardIcon sx={{ color: "#fff", fontSize: 34 }} />
+              )}
+            </Box>
+
+            {/* Title */}
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 800, fontSize: "1.2rem" }}
+            >
+              {dialogTitle}
+            </Typography>
+
+            {/* Description */}
+            <Typography
+              sx={{
+                fontSize: "0.88rem",
+                color: "rgba(255,255,255,0.7)",
+                lineHeight: 1.5,
+              }}
+            >
+              {dialogDescription}
+            </Typography>
+
+            {/* Plan Summary Card — only on success */}
+            {dialogTitle.startsWith("Thank") && dialogPlanName && (
+              <Box
+                sx={{
+                  width: "100%",
+                  borderRadius: 3,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  p: 2,
+                }}
+              >
+                <Stack spacing={1.2}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: "0.8rem",
+                        color: "rgba(255,255,255,0.5)",
+                      }}
+                    >
+                      Plan
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.85rem", fontWeight: 700 }}>
+                      {dialogPlanName}
+                    </Typography>
+                  </Stack>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: "0.8rem",
+                        color: "rgba(255,255,255,0.5)",
+                      }}
+                    >
+                      Billing
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.85rem", fontWeight: 700 }}>
+                      {dialogBillingCycle}
+                    </Typography>
+                  </Stack>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: "0.8rem",
+                        color: "rgba(255,255,255,0.5)",
+                      }}
+                    >
+                      Amount Paid
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: "0.95rem",
+                        fontWeight: 800,
+                        color: "#FF2D55",
+                      }}
+                    >
+                      ${dialogPlanPrice}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+            )}
+
+            {/* Member Benefits — only on success */}
+            {dialogTitle.startsWith("Thank") && (
+              <>
+                <Divider
+                  sx={{ width: "100%", borderColor: "rgba(255,255,255,0.08)" }}
+                />
+                <Stack spacing={1} sx={{ width: "100%", textAlign: "left" }}>
+                  {[
+                    "Unlimited access to all premium features",
+                    "Connect with members near you",
+                    "Exclusive events & community access",
+                  ].map((benefit, i) => (
+                    <Stack
+                      key={i}
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                    >
+                      <CheckCircleIcon
+                        sx={{ fontSize: 16, color: "#FF2D55" }}
+                      />
+                      <Typography
+                        sx={{
+                          fontSize: "0.8rem",
+                          color: "rgba(255,255,255,0.75)",
+                        }}
+                      >
+                        {benefit}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              </>
+            )}
+
+            {/* Buttons */}
+            <Stack direction="row" spacing={2} sx={{ width: "100%", pt: 1 }}>
+              {showCancelButton && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleDialogClose}
+                  sx={{
+                    borderRadius: 3,
+                    fontWeight: 600,
+                    py: 1.2,
+                    borderColor: "rgba(255,255,255,0.3)",
+                    color: "#fff",
+                  }}
+                >
+                  {cancelText.toUpperCase()}
+                </Button>
+              )}
+              {dialogConfirmAction && (
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    setDialogOpen(false);
+                    dialogConfirmAction();
+                  }}
+                  sx={{
+                    borderRadius: 3,
+                    fontWeight: 700,
+                    py: 1.2,
+                    background: "linear-gradient(90deg, #FF2D55, #7000FF)",
+                    color: "#fff",
+                  }}
+                >
+                  {confirmText.toUpperCase()}
+                </Button>
+              )}
+            </Stack>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Suspense>
   );
 }
